@@ -28,6 +28,7 @@
         <module>rocketmq-connect-cli</module>
         <module>distribution</module>
         <module>transforms</module>
+        <module>schema-converter</module>
     </modules>
     <name>RocketMQ Connect</name>
 
