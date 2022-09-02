@@ -15,14 +15,13 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.connect.runtime.controller.distributed;
+package org.apache.rocketmq.connect.runtime.controller.standalone;
 
 import java.nio.charset.StandardCharsets;
-
-import org.apache.rocketmq.connect.runtime.config.WorkerConfig;
 import org.apache.rocketmq.connect.runtime.connectorwrapper.NameServerMocker;
 import org.apache.rocketmq.connect.runtime.connectorwrapper.ServerResponseMocker;
 import org.apache.rocketmq.connect.runtime.connectorwrapper.testimpl.TestPositionManageServiceImpl;
+import org.apache.rocketmq.connect.runtime.controller.distributed.TestConfigManagementService;
 import org.apache.rocketmq.connect.runtime.controller.isolation.Plugin;
 import org.apache.rocketmq.connect.runtime.service.ClusterManagementService;
 import org.apache.rocketmq.connect.runtime.service.ClusterManagementServiceImpl;
@@ -39,58 +38,49 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
-public class DistributedConnectControllerTest {
+public class StandaloneConnectControllerTest {
 
-    private DistributedConnectController distributedConnectController;
+    private StandaloneConnectController standaloneConnectController;
 
     @Mock
     private Plugin plugin;
 
-    private DistributedConfig distributedConfig = new DistributedConfig();
+    private StandaloneConfig standaloneConfig = new StandaloneConfig();
 
     private ClusterManagementService clusterManagementService = new ClusterManagementServiceImpl();
 
     private ConfigManagementService configManagementService = new TestConfigManagementService();
 
     private PositionManagementService positionManagementService = new TestPositionManageServiceImpl();
-
     private StateManagementService stateManagementService = new StateManagementServiceImpl();
 
-    private WorkerConfig connectConfig = new WorkerConfig();
-
-    private ServerResponseMocker nameServerMocker;
-
-    private ServerResponseMocker brokerMocker;
 
     @Before
-    public void before() throws InterruptedException {
-        nameServerMocker = NameServerMocker.startByDefaultConf(9876, 10911);
-        brokerMocker = ServerResponseMocker.startServer(10911, "Hello World".getBytes(StandardCharsets.UTF_8));
-        connectConfig.setNamesrvAddr("127.0.0.1:9876");
-        clusterManagementService.initialize(connectConfig);
-        distributedConnectController = new DistributedConnectController(plugin, distributedConfig, clusterManagementService,
-            configManagementService, positionManagementService,stateManagementService);
-        distributedConnectController = new DistributedConnectController(
+    public void before() {
+        NameServerMocker.startByDefaultConf(9876, 10911);
+        ServerResponseMocker.startServer(10911, "Hello World".getBytes(StandardCharsets.UTF_8));
+        standaloneConfig.setNamesrvAddr("127.0.0.1:9876");
+        standaloneConfig.setHttpPort(10001);
+        clusterManagementService.initialize(standaloneConfig);
+        standaloneConnectController = new StandaloneConnectController(
                 plugin,
-                distributedConfig,
+                standaloneConfig,
                 clusterManagementService,
                 configManagementService,
                 positionManagementService,
-                stateManagementService );
-        distributedConnectController = new DistributedConnectController(plugin, distributedConfig, clusterManagementService,
+                stateManagementService
+        );
+        standaloneConnectController = new StandaloneConnectController(plugin, standaloneConfig, clusterManagementService,
             configManagementService, positionManagementService, stateManagementService);
     }
 
     @After
     public void after() {
-        distributedConnectController.shutdown();
-        nameServerMocker.shutdown();
-        brokerMocker.shutdown();
+        standaloneConnectController.shutdown();
     }
 
     @Test
     public void startTest() {
-        Assertions.assertThatCode(() -> distributedConnectController.start()).doesNotThrowAnyException();
+        Assertions.assertThatCode(() -> standaloneConnectController.start()).doesNotThrowAnyException();
     }
-
 }
