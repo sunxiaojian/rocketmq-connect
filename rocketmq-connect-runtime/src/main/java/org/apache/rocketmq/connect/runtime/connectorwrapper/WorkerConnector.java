@@ -356,8 +356,12 @@ public class WorkerConnector implements Runnable {
     /**
      * connector name
 <<<<<<< HEAD
+<<<<<<< HEAD
      *
 =======
+>>>>>>> master
+=======
+     *
 >>>>>>> master
      * @return
      */
@@ -368,8 +372,12 @@ public class WorkerConnector implements Runnable {
     /**
      * connector config
 <<<<<<< HEAD
+<<<<<<< HEAD
      *
 =======
+>>>>>>> master
+=======
+     *
 >>>>>>> master
      * @return
      */
