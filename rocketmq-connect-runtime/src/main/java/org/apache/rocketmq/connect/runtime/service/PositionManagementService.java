@@ -18,10 +18,11 @@
 
 package org.apache.rocketmq.connect.runtime.service;
 
+import io.openmessaging.connector.api.data.RecordConverter;
 import io.openmessaging.connector.api.data.RecordOffset;
 import java.util.List;
 import java.util.Map;
-import org.apache.rocketmq.connect.runtime.config.ConnectConfig;
+import org.apache.rocketmq.connect.runtime.config.WorkerConfig;
 import org.apache.rocketmq.connect.runtime.store.ExtendRecordPartition;
 
 /**
@@ -44,7 +45,7 @@ public interface PositionManagementService {
      *
      * @param config can be DistributedConfig or StandaloneConfig
      */
-    default void configure(ConnectConfig config) {
+    default void configure(WorkerConfig config) {
 
     }
 
@@ -61,7 +62,7 @@ public interface PositionManagementService {
     /**
      * Synchronize to other nodes.
      */
-    void synchronize();
+    void synchronize(boolean increment);
 
     /**
      * Get the current position table.
@@ -93,7 +94,7 @@ public interface PositionManagementService {
      */
     void registerListener(PositionUpdateListener listener);
 
-    void initialize(ConnectConfig connectConfig);
+    void initialize(WorkerConfig workerConfig, RecordConverter keyConverter, RecordConverter valueConverter);
 
     interface PositionUpdateListener {
 

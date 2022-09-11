@@ -32,13 +32,15 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.connect.runtime.common.LoggerName;
-import org.apache.rocketmq.connect.runtime.config.ConnectConfig;
+import org.apache.rocketmq.connect.runtime.config.WorkerConfig;
 import org.apache.rocketmq.connect.runtime.controller.distributed.DistributedConfig;
 import org.apache.rocketmq.connect.runtime.controller.distributed.DistributedConnectController;
+import org.apache.rocketmq.connect.runtime.converter.record.json.JsonConverter;
 import org.apache.rocketmq.connect.runtime.service.ClusterManagementService;
 import org.apache.rocketmq.connect.runtime.service.ConfigManagementService;
 import org.apache.rocketmq.connect.runtime.service.PositionManagementService;
 import org.apache.rocketmq.connect.runtime.service.StagingMode;
+import org.apache.rocketmq.connect.runtime.service.StateManagementService;
 import org.apache.rocketmq.connect.runtime.utils.FileAndPropertyUtil;
 import org.apache.rocketmq.connect.runtime.controller.isolation.Plugin;
 import org.apache.rocketmq.connect.runtime.utils.ServerUtil;
@@ -95,7 +97,7 @@ public class DistributedConnectStartup {
             }
 
             // Load configs from command line.
-            DistributedConfig connectConfig = new DistributedConfig();
+            DistributedConfig config = new DistributedConfig();
             if (commandLine.hasOption('c')) {
                 String file = commandLine.getOptionValue('c').trim();
                 if (file != null) {
@@ -103,13 +105,13 @@ public class DistributedConnectStartup {
                     InputStream in = new BufferedInputStream(new FileInputStream(file));
                     properties = new Properties();
                     properties.load(in);
-                    FileAndPropertyUtil.properties2Object(properties, connectConfig);
+                    FileAndPropertyUtil.properties2Object(properties, config);
                     in.close();
                 }
             }
 
-            if (null == connectConfig.getConnectHome()) {
-                System.out.printf("Please set the %s variable in your environment to match the location of the Connect installation", ConnectConfig.CONNECT_HOME_ENV);
+            if (null == config.getConnectHome()) {
+                System.out.printf("Please set the %s variable in your environment to match the location of the Connect installation", WorkerConfig.CONNECT_HOME_ENV);
                 System.exit(-2);
             }
 
@@ -117,11 +119,11 @@ public class DistributedConnectStartup {
             JoranConfigurator configurator = new JoranConfigurator();
             configurator.setContext(lc);
             lc.reset();
-            configurator.doConfigure(connectConfig.getConnectHome() + "/conf/logback.xml");
+            configurator.doConfigure(config.getConnectHome() + "/conf/logback.xml");
 
             List<String> pluginPaths = new ArrayList<>(16);
-            if (StringUtils.isNotEmpty(connectConfig.getPluginPaths())) {
-                String[] strArr = connectConfig.getPluginPaths().split(",");
+            if (StringUtils.isNotEmpty(config.getPluginPaths())) {
+                String[] strArr = config.getPluginPaths().split(",");
                 for (String path : strArr) {
                     if (StringUtils.isNotEmpty(path)) {
                         pluginPaths.add(path);
@@ -129,22 +131,26 @@ public class DistributedConnectStartup {
                 }
             }
             Plugin plugin = new Plugin(pluginPaths);
-            plugin.initPlugin();
 
             // Create controller and initialize.
             ClusterManagementService clusterManagementService = ServiceProviderUtil.getClusterManagementServices(StagingMode.DISTRIBUTED);
-            clusterManagementService.initialize(connectConfig);
+            clusterManagementService.initialize(config);
+            // config
             ConfigManagementService configManagementService = ServiceProviderUtil.getConfigManagementServices(StagingMode.DISTRIBUTED);
-            configManagementService.initialize(connectConfig, plugin);
+            configManagementService.initialize(config, new JsonConverter(), plugin);
+            // position
             PositionManagementService positionManagementServices = ServiceProviderUtil.getPositionManagementServices(StagingMode.DISTRIBUTED);
-            positionManagementServices.initialize(connectConfig);
-
+            positionManagementServices.initialize(config, new JsonConverter(), new JsonConverter());
+            // state
+            StateManagementService stateManagementService = ServiceProviderUtil.getStateManagementServices(StagingMode.DISTRIBUTED);
+            stateManagementService.initialize(config, new JsonConverter());
             DistributedConnectController controller = new DistributedConnectController(
                     plugin,
-                    connectConfig,
+                    config,
                     clusterManagementService,
                     configManagementService,
-                    positionManagementServices);
+                    positionManagementServices,
+                    stateManagementService);
             // Invoked when shutdown.
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                 private volatile boolean hasShutdown = false;

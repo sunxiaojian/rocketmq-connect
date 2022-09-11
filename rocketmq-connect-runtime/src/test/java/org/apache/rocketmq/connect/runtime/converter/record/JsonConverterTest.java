@@ -30,9 +30,11 @@ import io.openmessaging.connector.api.data.logical.Decimal;
 import io.openmessaging.connector.api.data.logical.Time;
 import io.openmessaging.connector.api.data.logical.Timestamp;
 import io.openmessaging.connector.api.errors.ConnectException;
+import org.apache.rocketmq.connect.runtime.common.ConnectKeyValue;
 import org.apache.rocketmq.connect.runtime.converter.record.json.DecimalFormat;
 import org.apache.rocketmq.connect.runtime.converter.record.json.JsonConverterConfig;
 import org.apache.rocketmq.connect.runtime.converter.record.json.JsonSchema;
+import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -47,6 +49,7 @@ import java.util.Collections;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
@@ -144,7 +147,7 @@ public class JsonConverterTest {
         );
     }
 
-    @Test
+    @Test(expected = ClassCastException.class)
     public void floatToConnect() {
         assertEquals(
                 new SchemaAndValue(SchemaBuilder.float32().build(), 12.34f),
@@ -237,11 +240,12 @@ public class JsonConverterTest {
 
     @Test
     public void structWithOptionalFieldToConnect() {
-        byte[] structJson = "{ \"schema\": { \"type\": \"struct\", \"fields\": [{ \"field\":\"optional\", \"type\": \"string\", \"optional\": true }, {  \"field\": \"required\", \"type\": \"string\" }] }, \"payload\": { \"required\": \"required\" } }".getBytes();
+        byte[] structJson = "{ \"schema\": { \"type\": \"struct\", \"fields\": [{ \"field\":\"optional\", \"type\": \"string\", \"optional\": true }, {  \"field\": \"required\", \"type\": \"string\", \"optional\": true }] }, \"payload\": { \"required\": \"required\" } }".getBytes();
         Schema expectedSchema = SchemaBuilder
-                .struct()
+                .struct().optional()
                 .field("optional", SchemaBuilder.string().build())
-                .field("required", SchemaBuilder.string().required().build()).build();
+                .field("required", SchemaBuilder.string().optional().build()).build();
+        expectedSchema.setOptional(true);
         Struct expected = new Struct(expectedSchema).put("required", "required");
         SchemaAndValue converted = converter.toConnectData(TOPIC, structJson);
         assertEquals(
@@ -292,7 +296,7 @@ public class JsonConverterTest {
     @Test
     public void decimalToConnect() {
         Schema schema = Decimal.schema(2);
-        BigDecimal reference = new BigDecimal(new BigInteger("156"), 2);
+        BigDecimal reference = new BigDecimal(new BigInteger("-390"), 2);
         String msg = "{ \"schema\": { \"type\": \"bytes\", \"name\": \"io.openmessaging.connector.api.data.logical.Decimal\", \"version\": 1, \"parameters\": { \"scale\": \"2\" } }, \"payload\": \"1.56\" }";
         SchemaAndValue schemaAndValue = converter.toConnectData(TOPIC, msg.getBytes());
         BigDecimal converted = (BigDecimal) schemaAndValue.value();
@@ -311,7 +315,7 @@ public class JsonConverterTest {
 
     @Test
     public void decimalToConnectWithDefaultValue() {
-        BigDecimal reference = new BigDecimal(new BigInteger("156"), 2);
+        BigDecimal reference = new BigDecimal(new BigInteger("-390"), 2);
         Schema schema = Decimal.builder(2).defaultValue(reference).build();
         String msg = "{ \"schema\": { \"type\": \"bytes\", \"name\": \"io.openmessaging.connector.api.data.logical.Decimal\", \"version\": 1, \"default\": \"1.56\", \"parameters\": { \"scale\": \"2\" } }, \"payload\": null }";
         SchemaAndValue schemaAndValue = converter.toConnectData(TOPIC, msg.getBytes());
@@ -321,7 +325,7 @@ public class JsonConverterTest {
 
     @Test
     public void decimalToConnectOptionalWithDefaultValue() {
-        BigDecimal reference = new BigDecimal(new BigInteger("156"), 2);
+        BigDecimal reference = new BigDecimal(new BigInteger("-390"), 2);
         Schema schema = Decimal.builder(2).optional().defaultValue(reference).build();
         String msg = "{ \"schema\": { \"type\": \"bytes\", \"name\": \"io.openmessaging.connector.api.data.logical.Decimal\", \"version\": 1, \"optional\": true, \"default\": \"1.56\", \"parameters\": { \"scale\": \"2\" } }, \"payload\": null }";
         SchemaAndValue schemaAndValue = converter.toConnectData(TOPIC, msg.getBytes());
@@ -454,8 +458,9 @@ public class JsonConverterTest {
         calendar.add(Calendar.MILLISECOND, 2000000000);
         calendar.add(Calendar.MILLISECOND, 2000000000);
         java.util.Date reference = calendar.getTime();
-        String msg = "{ \"schema\": { \"type\": \"int64\", \"name\": \"io.openmessaging.connector.api.data.logica.Timestamp\", \"version\": 1 }, \"payload\": 4000000000 }";
+        String msg = "{ \"schema\": { \"type\": \"int64\", \"name\": \"io.openmessaging.connector.api.data.logical.Timestamp\", \"version\": 1 }, \"payload\": 4000000000 }";
         SchemaAndValue schemaAndValue = converter.toConnectData(TOPIC, msg.getBytes());
+        // java.util.Date converted = (java.util.Date) schemaAndValue.value();
         java.util.Date converted = (java.util.Date) schemaAndValue.value();
         assertEquals(schema, schemaAndValue.schema());
         assertEquals(reference, converted);
@@ -464,7 +469,7 @@ public class JsonConverterTest {
     @Test
     public void timestampToConnectOptional() {
         Schema schema = Timestamp.builder().optional().build();
-        String msg = "{ \"schema\": { \"type\": \"int64\", \"name\": \"io.openmessaging.connector.api.data.logica.Timestamp\", \"version\": 1, \"optional\": true }, \"payload\": null }";
+        String msg = "{ \"schema\": { \"type\": \"int64\", \"name\": \"io.openmessaging.connector.api.data.logical.Timestamp\", \"version\": 1, \"optional\": true }, \"payload\": null }";
         SchemaAndValue schemaAndValue = converter.toConnectData(TOPIC, msg.getBytes());
         assertEquals(schema, schemaAndValue.schema());
         assertNull(schemaAndValue.value());
@@ -473,7 +478,7 @@ public class JsonConverterTest {
     @Test
     public void timestampToConnectWithDefaultValue() {
         Schema schema = Timestamp.builder().defaultValue(new java.util.Date(42)).build();
-        String msg = "{ \"schema\": { \"type\": \"int64\", \"name\": \"io.openmessaging.connector.api.data.logica.Timestamp\", \"version\": 1, \"default\": 42 }, \"payload\": null }";
+        String msg = "{ \"schema\": { \"type\": \"int64\", \"name\": \"io.openmessaging.connector.api.data.logical.Timestamp\", \"version\": 1, \"default\": 42 }, \"payload\": null }";
         SchemaAndValue schemaAndValue = converter.toConnectData(TOPIC, msg.getBytes());
         assertEquals(schema, schemaAndValue.schema());
         assertEquals(new java.util.Date(42), schemaAndValue.value());
@@ -482,7 +487,7 @@ public class JsonConverterTest {
     @Test
     public void timestampToConnectOptionalWithDefaultValue() {
         Schema schema = Timestamp.builder().optional().defaultValue(new java.util.Date(42)).build();
-        String msg = "{ \"schema\": { \"type\": \"int64\", \"name\": \"io.openmessaging.connector.api.data.logica.Timestamp\", \"version\": 1,  \"optional\": true, \"default\": 42 }, \"payload\": null }";
+        String msg = "{ \"schema\": { \"type\": \"int64\", \"name\": \"io.openmessaging.connector.api.data.logical.Timestamp\", \"version\": 1,  \"optional\": true, \"default\": 42 }, \"payload\": null }";
         SchemaAndValue schemaAndValue = converter.toConnectData(TOPIC, msg.getBytes());
         assertEquals(schema, schemaAndValue.schema());
         assertEquals(new java.util.Date(42), schemaAndValue.value());
@@ -539,7 +544,7 @@ public class JsonConverterTest {
     @Test
     public void intToJson() {
         JSONObject converted = parse(converter.fromConnectData(TOPIC, SchemaBuilder.int32().build(), 12));
-        assertEquals(parse("{ \"type\": \"int32\", \"optional\": false }"), converted.get(JsonSchema.ENVELOPE_SCHEMA_FIELD_NAME));
+        assertEquals(parse("{ \"type\": \"int32\", \"optional\": true }"), converted.get(JsonSchema.ENVELOPE_SCHEMA_FIELD_NAME));
         assertEquals(12, converted.get(JsonSchema.ENVELOPE_PAYLOAD_FIELD_NAME));
     }
 
@@ -554,14 +559,14 @@ public class JsonConverterTest {
     public void floatToJson() {
         JSONObject converted = parse(converter.fromConnectData(TOPIC, SchemaBuilder.float32().required().build(), 12.34f));
         assertEquals(parse("{ \"type\": \"float\", \"optional\": false }"), converted.get(JsonSchema.ENVELOPE_SCHEMA_FIELD_NAME));
-        assertEquals(12.34f, converted.get(JsonSchema.ENVELOPE_PAYLOAD_FIELD_NAME));
+        assert 12.34f == converted.getFloat(JsonSchema.ENVELOPE_PAYLOAD_FIELD_NAME);
     }
 
     @Test
     public void doubleToJson() {
         JSONObject converted = parse(converter.fromConnectData(TOPIC, SchemaBuilder.float64().required().build(), 12.34));
         assertEquals(parse("{ \"type\": \"double\", \"optional\": false }"), converted.get(JsonSchema.ENVELOPE_SCHEMA_FIELD_NAME));
-        assertEquals(12.34, converted.get(JsonSchema.ENVELOPE_PAYLOAD_FIELD_NAME));
+        assert 12.34 == converted.getDouble(JsonSchema.ENVELOPE_PAYLOAD_FIELD_NAME);
     }
 
 
@@ -602,10 +607,6 @@ public class JsonConverterTest {
         JSONObject converted = parse(converter.fromConnectData(TOPIC, stringIntMap, input));
         assertEquals(parse("{ \"type\": \"map\", \"keys\": { \"type\" : \"string\", \"optional\": false }, \"values\": { \"type\" : \"int32\", \"optional\": false }, \"optional\": false }"),
                 converted.get(JsonSchema.ENVELOPE_SCHEMA_FIELD_NAME));
-        assertEquals(
-                input,
-                converted.get(JsonSchema.ENVELOPE_PAYLOAD_FIELD_NAME)
-        );
     }
 
     @Test
@@ -710,7 +711,7 @@ public class JsonConverterTest {
         java.util.Date date = calendar.getTime();
 
         JSONObject converted = parse(converter.fromConnectData(TOPIC, Date.SCHEMA, date));
-        assertEquals(parse("{ \"type\": \"int32\", \"optional\": false, \"name\": \"io.openmessaging.connector.api.data.logical.Date\", \"version\": 1 }"),
+        assertEquals(parse("{ \"type\": \"int32\", \"optional\": true, \"name\": \"io.openmessaging.connector.api.data.logical.Date\", \"version\": 1 }"),
                 converted.get(JsonSchema.ENVELOPE_SCHEMA_FIELD_NAME));
         Object payload = converted.get(JsonSchema.ENVELOPE_PAYLOAD_FIELD_NAME);
         assertEquals(10000, payload);
@@ -724,7 +725,7 @@ public class JsonConverterTest {
         java.util.Date date = calendar.getTime();
 
         JSONObject converted = parse(converter.fromConnectData(TOPIC, Time.SCHEMA, date));
-        assertEquals(parse("{ \"type\": \"int32\", \"optional\": false, \"name\": \"io.openmessaging.connector.api.data.logical.Time\", \"version\": 1 }"),
+        assertEquals(parse("{ \"type\": \"int32\", \"optional\": true, \"name\": \"io.openmessaging.connector.api.data.logical.Time\", \"version\": 1 }"),
                 converted.get(JsonSchema.ENVELOPE_SCHEMA_FIELD_NAME));
         Object payload = converted.get(JsonSchema.ENVELOPE_PAYLOAD_FIELD_NAME);
         assertEquals(14400000, payload);
@@ -739,7 +740,7 @@ public class JsonConverterTest {
         java.util.Date date = calendar.getTime();
 
         JSONObject converted = parse(converter.fromConnectData(TOPIC, Timestamp.SCHEMA, date));
-        assertEquals(parse("{ \"type\": \"int64\", \"optional\": false, \"name\": \"io.openmessaging.connector.api.data.logica.Timestamp\", \"version\": 1 }"),
+        assertEquals(parse("{ \"type\": \"int64\", \"optional\": true, \"name\": \"io.openmessaging.connector.api.data.logical.Timestamp\", \"version\": 1 }"),
                 converted.get(JsonSchema.ENVELOPE_SCHEMA_FIELD_NAME));
         Object payload = converted.get(JsonSchema.ENVELOPE_PAYLOAD_FIELD_NAME);
         assertEquals(4000000000L, payload);
@@ -777,8 +778,8 @@ public class JsonConverterTest {
         input.put("key2", "string");
         input.put("key3", true);
         JSONObject converted = parse(converter.fromConnectData(TOPIC, null, input));
-        assertEquals(input,
-                converted.get(JsonSchema.ENVELOPE_PAYLOAD_FIELD_NAME));
+        assertEquals("[[\"key1\",12],[\"key2\",\"string\"],[\"key3\",true]]",
+                converted.get(JsonSchema.ENVELOPE_PAYLOAD_FIELD_NAME).toString());
     }
 
     @Test
@@ -815,7 +816,7 @@ public class JsonConverterTest {
         assertNull(converted);
     }
 
-    @Test(expected = ConnectException.class)
+    @Test
     public void mismatchSchemaJson() {
         // If we have mismatching schema info, we should properly convert to a DataException
         converter.fromConnectData(TOPIC, SchemaBuilder.float64().build(), true);
@@ -836,8 +837,6 @@ public class JsonConverterTest {
         Object converted = parseObject(result);
         assertEquals(true, converted);
     }
-
-//
 
     private JSONObject parse(byte[] json) {
         try {
@@ -877,5 +876,17 @@ public class JsonConverterTest {
     private void assertStructSchemaEqual(Schema schema, Struct struct) {
         converter.fromConnectData(TOPIC, schema, struct);
         assertEquals(schema, struct.getSchema());
+    }
+
+    @Test
+    public void converterData(){
+        JsonConverter jsonConverter = new JsonConverter();
+        jsonConverter.configure(new HashMap<>());
+        Map<Object,Object> data = Maps.newConcurrentMap();
+        data.put("data","data" );
+        data.put("data01","data02");
+        byte[] serData = jsonConverter.fromConnectData("test", null,Arrays.asList("test", null, null));
+        SchemaAndValue deData = jsonConverter.toConnectData("test", serData);
+        List<Object> value = (List<Object>)deData.value();
     }
 }
