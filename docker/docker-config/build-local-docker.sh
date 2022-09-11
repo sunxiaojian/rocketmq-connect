@@ -42,7 +42,7 @@ function docker_push() {
 
   ## build docker image
   echo docker build -f Dockerfile -t $repository:$latestVersion
-  docker build -f Dockerfile -t $repository:$latestVersion .
+  docker build  --build-arg APPLICATION="${full_app}" -f Dockerfile -t $repository:$latestVersion .
 
   ## push docker image
   echo docker push $repository:$latestVersion

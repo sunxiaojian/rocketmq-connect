@@ -19,19 +19,19 @@ FROM openjdk:8-alpine
 
 RUN apk add --no-cache bash gettext nmap-ncat openssl busybox-extras
 
-ARG version
+ARG APPLICATION
 
 # RocketMQ connect version
-ENV ROCKETMQ_VERSION ${version}
+ENV APPLICATION ${APPLICATION}
 
 # RocketMQ connect home
 ENV ROCKETMQ_CONNECT_HOME  /root/rocketmq-connect
 
 WORKDIR ${ROCKETMQ_CONNECT_HOME}
 
-COPY ./rocketmq-connect-0.0.1-SNAPSHOT/bin ${KAFKA_CONNECTOR_HOME}/bin
-COPY ./rocketmq-connect-0.0.1-SNAPSHOT/conf ${KAFKA_CONNECTOR_HOME}/conf
-COPY ./rocketmq-connect-0.0.1-SNAPSHOT/lib ${KAFKA_CONNECTOR_HOME}/lib
+COPY ./APPLICATION/bin ${KAFKA_CONNECTOR_HOME}/bin
+COPY ./APPLICATION/conf ${KAFKA_CONNECTOR_HOME}/conf
+COPY ./APPLICATION/lib ${KAFKA_CONNECTOR_HOME}/lib
 
 # Copy customized scripts
 COPY rocketmq-connect-start.sh ${ROCKETMQ_CONNECT_HOME}/
