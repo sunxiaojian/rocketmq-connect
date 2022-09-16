@@ -16,17 +16,14 @@
  */
 package org.apache.rocketmq.schema.json;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.openmessaging.connector.api.data.RecordConverter;
 import io.openmessaging.connector.api.data.Schema;
 import io.openmessaging.connector.api.data.SchemaAndValue;
-import io.openmessaging.connector.api.errors.ConnectException;
-import org.apache.commons.lang3.SerializationException;
-import org.apache.rocketmq.schema.registry.client.NormalSchemaRegistryClient;
+import lombok.SneakyThrows;
+import org.apache.rocketmq.schema.json.serde.JsonSchemaDeserializer;
+import org.apache.rocketmq.schema.json.serde.JsonSchemaSerializer;
 import org.apache.rocketmq.schema.registry.client.SchemaRegistryClient;
-import org.apache.rocketmq.schema.registry.client.rest.RestService;
-import org.apache.rocketmq.schema.registry.client.serde.json.JsonDeserializer;
-import org.apache.rocketmq.schema.registry.client.serde.json.JsonSerializer;
+import org.apache.rocketmq.schema.registry.client.SchemaRegistryClientFactory;
 
 import java.util.Map;
 
@@ -34,41 +31,45 @@ import java.util.Map;
  * json schema converter
  */
 public class JsonSchemaConverter implements RecordConverter {
-
     private SchemaRegistryClient schemaRegistry;
+    private JsonSchemaSerializer serializer;
+    private JsonSchemaDeserializer deserializer;
+    /**
+     * is key
+     */
+    private boolean isKey = false;
 
-    private JsonSerializer serializer;
-    private JsonDeserializer deserializer;
-    private  JsonSchemaData jsonSchemaData;
     @Override
     public void configure(Map<String, ?> configs) {
+        if (!configs.containsKey(JsonSchemaConverterConfig.IS_KEY)) {
+            throw new IllegalArgumentException("Configuration item [isKey] can not empty!");
+        }
+        // convert key
+        this.isKey = Boolean.parseBoolean(configs.get(JsonSchemaConverterConfig.IS_KEY).toString());
 
         JsonSchemaConverterConfig jsonSchemaConfig = new JsonSchemaConverterConfig(configs);
         if (schemaRegistry == null) {
-            schemaRegistry = new NormalSchemaRegistryClient(
-                    new RestService(""));
+            schemaRegistry = SchemaRegistryClientFactory.newClient(jsonSchemaConfig.getSchemaRegistryUrl(), null);
         }
-        serializer = new JsonSerializer(schemaRegistry);
-        serializer.configure(configs);
-        deserializer = new JsonDeserializer(schemaRegistry);
-        deserializer.configure(configs);
-        jsonSchemaData = new JsonSchemaData(jsonSchemaConfig);
+        serializer = new JsonSchemaSerializer(configs, schemaRegistry);
+        deserializer = new JsonSchemaDeserializer(configs, schemaRegistry);
     }
 
+    @SneakyThrows
     @Override
     public byte[] fromConnectData(String topic, Schema schema, Object value) {
         if (schema == null && value == null) {
             return null;
         }
-        org.everit.json.schema.Schema jsonSchema = jsonSchemaData.fromJsonSchema(schema);
-        JsonNode jsonValue = jsonSchemaData.fromConnectData(schema, value);
-
-        // to byte[]
-        return new byte[0];
+        return serializer.serialize(topic, isKey, schema, value);
     }
 
     @Override
     public SchemaAndValue toConnectData(String topic, byte[] value) {
-        return null;
+        if (value == null) {
+            return SchemaAndValue.NULL;
+        }
+        return deserializer.deserialize(topic, isKey, value);
     }
+
 }

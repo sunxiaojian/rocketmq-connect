@@ -19,20 +19,46 @@ import java.util.Locale;
 import java.util.Map;
 
 public class JsonSchemaConverterConfig {
-
+  public static final String SCHEMA_REGISTRY_URL = "schema.registry.url";
   public static final String USE_OPTIONAL_FOR_NON_REQUIRED_CONFIG = "use.optional.for.nonrequired";
   public static final boolean USE_OPTIONAL_FOR_NON_REQUIRED_DEFAULT = false;
   public static final String SCHEMAS_CACHE_SIZE_CONFIG = "schemas.cache.size";
   public static final int SCHEMAS_CACHE_SIZE_DEFAULT = 1000;
   public static final String DECIMAL_FORMAT_CONFIG = "decimal.format";
   public static final DecimalFormat DECIMAL_FORMAT_DEFAULT = DecimalFormat.BASE64;
+  public static final String IS_KEY = "isKey";
+  /**
+   * validate schema enabled
+   */
+  public static final String VALIDATE_ENABLED = "validate.enabled";
+  public static final boolean VALIDATE_ENABLED_DEFAULT = true;
+
+  /**
+   * auto registry schema
+   */
+
+  public static final String AUTO_REGISTER_SCHEMAS = "auto.register.schemas";
+  public static final boolean AUTO_REGISTER_SCHEMAS_DEFAULT = true;
 
 
-  private final Map<?, ?> props;
-  public JsonSchemaConverterConfig(Map<?, ?> props) {
+  private final Map<String, ?> props;
+
+  public JsonSchemaConverterConfig(Map<String, ?> props) {
     this.props = props;
+    if (!props.containsKey(SCHEMA_REGISTRY_URL)) {
+      throw new IllegalArgumentException("Config item [schema.registry.url] can not empty!");
+    }
   }
 
+
+  public boolean validate() {
+    return props.containsKey(VALIDATE_ENABLED) ?
+            Boolean.valueOf(props.get(VALIDATE_ENABLED).toString()) : VALIDATE_ENABLED_DEFAULT;
+  }
+
+  public String getSchemaRegistryUrl() {
+    return props.get(SCHEMA_REGISTRY_URL).toString();
+  }
 
   public boolean useOptionalForNonRequiredProperties() {
     return props.containsKey(USE_OPTIONAL_FOR_NON_REQUIRED_CONFIG) ?
@@ -42,6 +68,7 @@ public class JsonSchemaConverterConfig {
 
   /**
    * schema cache size
+   *
    * @return
    */
   public int schemaCacheSize() {
@@ -59,6 +86,16 @@ public class JsonSchemaConverterConfig {
     return props.containsKey(DECIMAL_FORMAT_CONFIG) ?
             DecimalFormat.valueOf(props.get(DECIMAL_FORMAT_CONFIG).toString().toUpperCase(Locale.ROOT)) : DECIMAL_FORMAT_DEFAULT;
 
+  }
+
+
+  /**
+   * auto registry schema
+   * @return
+   */
+  public boolean autoRegistrySchema(){
+    return props.containsKey(AUTO_REGISTER_SCHEMAS) ?
+            Boolean.valueOf(AUTO_REGISTER_SCHEMAS) : AUTO_REGISTER_SCHEMAS_DEFAULT;
   }
 
 }

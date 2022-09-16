@@ -14,13 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.rocketmq.schema.json;
-
+package org.apache.rocketmq.schema.json.serde;
 
 /**
- * decimal format
+ * subject
  */
-public enum DecimalFormat {
-    BASE64,
-    NUMERIC;
+public class TopicNameStrategy {
+
+    /**
+     * generate subject name
+     * @param topic
+     * @param isKey
+     * @return
+     */
+    public static String subjectName(String topic, boolean isKey) {
+        return isKey ? topic + "-key" : topic + "-value";
+    }
 }
