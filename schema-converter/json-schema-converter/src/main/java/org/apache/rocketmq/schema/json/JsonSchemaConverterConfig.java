@@ -22,6 +22,9 @@ import java.util.Map;
 public class JsonSchemaConverterConfig {
   public static final String SCHEMA_REGISTRY_URL = "schema.registry.url";
   public static final String IS_KEY = "isKey";
+
+  public static final String SERDE_SCHEMA_REGISTRY_ID = "serde.schema.registry.id";
+
   public static final String USE_OPTIONAL_FOR_NON_REQUIRED_CONFIG = "use.optional.for.nonrequired";
   private static final boolean USE_OPTIONAL_FOR_NON_REQUIRED_DEFAULT = false;
   public static final String SCHEMAS_CACHE_SIZE_CONFIG = "schemas.cache.size";
@@ -35,10 +38,10 @@ public class JsonSchemaConverterConfig {
   private static final boolean VALIDATE_ENABLED_DEFAULT = true;
 
 
+
   /**
    * auto registry schema
    */
-
   public static final String AUTO_REGISTER_SCHEMAS = "auto.register.schemas";
   private static final boolean AUTO_REGISTER_SCHEMAS_DEFAULT = true;
 
@@ -98,6 +101,16 @@ public class JsonSchemaConverterConfig {
   public boolean autoRegistrySchema(){
     return props.containsKey(AUTO_REGISTER_SCHEMAS) ?
             Boolean.valueOf(props.get(AUTO_REGISTER_SCHEMAS).toString()) : AUTO_REGISTER_SCHEMAS_DEFAULT;
+  }
+
+
+  /**
+   * set serde schema registry id
+   * @return
+   */
+  public long serdeSchemaRegistryId(){
+    return props.containsKey(SERDE_SCHEMA_REGISTRY_ID) ?
+            Long.valueOf(props.get(SERDE_SCHEMA_REGISTRY_ID).toString()) : -1;
   }
 
 }

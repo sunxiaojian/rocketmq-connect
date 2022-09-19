@@ -101,6 +101,10 @@ public class JsonSchemaSerializer{
      */
     private long getSchemaId(Schema schema, String subjectName, org.everit.json.schema.Schema jsonSchema) throws IOException, RestClientException {
         long schemaId = 0 ;
+        if (jsonSchemaConverterConfig.serdeSchemaRegistryId() > -1){
+            schemaId = jsonSchemaConverterConfig.serdeSchemaRegistryId();
+            // todo  Specify the ID for serialization， get schema info
+        }
         try {
             GetSchemaResponse schemaResponse = registryClient.getSchemaBySubject(subjectName);
             if (schemaResponse != null) {
@@ -108,7 +112,7 @@ public class JsonSchemaSerializer{
             }
         } catch (RestClientException e) {}
         if (!jsonSchemaConverterConfig.autoRegistrySchema() && schemaId == 0){
-            throw new RuntimeException("");
+            throw new RuntimeException("No related schema found");
         }
         if (jsonSchemaConverterConfig.autoRegistrySchema() && schemaId == 0 ){
             RegisterSchemaResponse registerSchemaResponse = registryClient.registerSchema(
