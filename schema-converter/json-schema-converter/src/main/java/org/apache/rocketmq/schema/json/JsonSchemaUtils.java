@@ -17,6 +17,7 @@
 package org.apache.rocketmq.schema.json;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -69,7 +70,9 @@ public class JsonSchemaUtils {
             if (value instanceof ArrayNode) {
                 jsonObject = objectMapper.treeToValue(((ArrayNode) value), JSONArray.class);
             } else if (value instanceof JsonNode) {
-                jsonObject = objectMapper.treeToValue(((JsonNode) value), JSONObject.class);
+                ;
+                jsonObject = new JSONObject(objectMapper.writeValueAsString(value));
+//                jsonObject = objectMapper.treeToValue((TreeNode) value, JSONObject.class);
             } else if (value.getClass().isArray()) {
                 jsonObject = objectMapper.convertValue(value, JSONArray.class);
             } else {

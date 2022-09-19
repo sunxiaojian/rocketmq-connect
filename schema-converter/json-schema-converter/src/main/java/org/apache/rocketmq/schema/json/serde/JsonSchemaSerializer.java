@@ -70,28 +70,7 @@ public class JsonSchemaSerializer{
         String subjectName = TopicNameStrategy.subjectName(topic, isKey);
         org.everit.json.schema.Schema jsonSchema = jsonSchemaData.fromJsonSchema(schema);
         try {
-            long schemaId = 0 ;
-            if (jsonSchemaConverterConfig.autoRegistrySchema()){
-                RegisterSchemaResponse registerSchemaResponse = registryClient.registerSchema(
-                        topic,
-                        schema.getName(),
-                        RegisterSchemaRequest
-                                .builder()
-                                .schemaType(SchemaType.JSON)
-                                .compatibility(Compatibility.BACKWARD)
-                                .schemaIdl(jsonSchema.toString())
-                                .build()
-                );
-                schemaId = registerSchemaResponse.getRecordId();
-            } else {
-                GetSchemaResponse schemaResponse = registryClient.getSchemaBySubject(subjectName);
-                if (schemaResponse != null) {
-                    schemaId = schemaResponse.getRecordId();
-                } else {
-                    throw new RuntimeException("Error retrieving JSON schema");
-                }
-            }
-
+            long schemaId = getSchemaId(schema, subjectName, jsonSchema);
             JsonNode jsonValue = jsonSchemaData.fromConnectData(schema, value);
             // validate json value
             if (jsonSchemaConverterConfig.validate()) {
@@ -109,6 +88,44 @@ public class JsonSchemaSerializer{
         } catch (RestClientException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * get schema id
+     * @param schema
+     * @param subjectName
+     * @param jsonSchema
+     * @return
+     * @throws IOException
+     * @throws RestClientException
+     */
+    private long getSchemaId(Schema schema, String subjectName, org.everit.json.schema.Schema jsonSchema) throws IOException, RestClientException {
+        long schemaId = 0 ;
+        try {
+            GetSchemaResponse schemaResponse = registryClient.getSchemaBySubject(subjectName);
+            if (schemaResponse != null) {
+                schemaId = schemaResponse.getRecordId();
+            }
+        } catch (RestClientException e) {}
+        if (!jsonSchemaConverterConfig.autoRegistrySchema() && schemaId == 0){
+            throw new RuntimeException("");
+        }
+        if (jsonSchemaConverterConfig.autoRegistrySchema() && schemaId == 0 ){
+            RegisterSchemaResponse registerSchemaResponse = registryClient.registerSchema(
+                    subjectName,
+                    schema.getName() == null || schema.getName().equals("")
+                            ? subjectName : schema.getName(),
+                    RegisterSchemaRequest
+                            .builder()
+                            .schemaType(SchemaType.JSON)
+                            .compatibility(Compatibility.BACKWARD)
+                            .schemaIdl(jsonSchema.toString())
+                            .desc(schema.getDoc())
+                            .build()
+            );
+            schemaId = registerSchemaResponse.getRecordId();
+        }
+        return schemaId;
     }
 
 }

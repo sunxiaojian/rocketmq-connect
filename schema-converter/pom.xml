@@ -59,6 +59,22 @@
             <version>${json-schema.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${assertj.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
+        </dependency>
+
     </dependencies>
 
     <properties>
@@ -69,6 +85,9 @@
         <json-schema.version>1.14.1</json-schema.version>
         <schema-registry.version>0.0.4-SNAPSHOT</schema-registry.version>
         <jackson.version>2.12.3</jackson.version>
+        <junit.version>4.13.1</junit.version>
+        <assertj.version>3.22.0</assertj.version>
+        <mockito.version>4.7.0</mockito.version>
     </properties>
 
 </project>
