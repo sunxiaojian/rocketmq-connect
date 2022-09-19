@@ -44,9 +44,8 @@ public class JsonSchemaConverterTest {
         struct.put("test-int", new Integer(1000000));
         struct.put("test-bool", true);
         struct.put("test-str", "test-str");
-        byte[] bytes = jsonSchemaConverter.fromConnectData("test-topic-05", schema, struct);
-
-
+        jsonSchemaConverter.fromConnectData("test-topic-05", schema, struct);
+        
     }
 
     /**
