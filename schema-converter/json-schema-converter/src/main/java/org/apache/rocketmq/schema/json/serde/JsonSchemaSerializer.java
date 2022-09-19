@@ -104,6 +104,7 @@ public class JsonSchemaSerializer{
         if (jsonSchemaConverterConfig.serdeSchemaRegistryId() > -1){
             schemaId = jsonSchemaConverterConfig.serdeSchemaRegistryId();
             // todo  Specify the ID for serialization， get schema info
+            return schemaId;
         }
         try {
             GetSchemaResponse schemaResponse = registryClient.getSchemaBySubject(subjectName);
