@@ -16,19 +16,14 @@
  */
 package org.apache.rocketmq.schema.json;
 
+import org.apache.rocketmq.schema.common.AbstractConverterConfig;
+
 import java.util.Locale;
 import java.util.Map;
 
-public class JsonSchemaConverterConfig {
-  public static final String SCHEMA_REGISTRY_URL = "schema.registry.url";
-  public static final String IS_KEY = "isKey";
-
-  public static final String SERDE_SCHEMA_REGISTRY_ID = "serde.schema.registry.id";
-
+public class JsonSchemaConverterConfig extends AbstractConverterConfig {
   public static final String USE_OPTIONAL_FOR_NON_REQUIRED_CONFIG = "use.optional.for.nonrequired";
   private static final boolean USE_OPTIONAL_FOR_NON_REQUIRED_DEFAULT = false;
-  public static final String SCHEMAS_CACHE_SIZE_CONFIG = "schemas.cache.size";
-  private static final int SCHEMAS_CACHE_SIZE_DEFAULT = 1000;
   public static final String DECIMAL_FORMAT_CONFIG = "decimal.format";
   private static final DecimalFormat DECIMAL_FORMAT_DEFAULT = DecimalFormat.BASE64;
   /**
@@ -37,22 +32,11 @@ public class JsonSchemaConverterConfig {
   public static final String VALIDATE_ENABLED = "validate.enabled";
   private static final boolean VALIDATE_ENABLED_DEFAULT = true;
 
-
-
-  /**
-   * auto registry schema
-   */
-  public static final String AUTO_REGISTER_SCHEMAS = "auto.register.schemas";
-  private static final boolean AUTO_REGISTER_SCHEMAS_DEFAULT = true;
-
-
   private final Map<String, ?> props;
 
   public JsonSchemaConverterConfig(Map<String, ?> props) {
+    super(props);
     this.props = props;
-    if (!props.containsKey(SCHEMA_REGISTRY_URL)) {
-      throw new IllegalArgumentException("Config item [schema.registry.url] can not empty!");
-    }
   }
 
 
@@ -61,27 +45,10 @@ public class JsonSchemaConverterConfig {
             Boolean.valueOf(props.get(VALIDATE_ENABLED).toString()) : VALIDATE_ENABLED_DEFAULT;
   }
 
-  public String getSchemaRegistryUrl() {
-    return props.get(SCHEMA_REGISTRY_URL).toString();
-  }
-
   public boolean useOptionalForNonRequiredProperties() {
     return props.containsKey(USE_OPTIONAL_FOR_NON_REQUIRED_CONFIG) ?
             Boolean.valueOf(props.get(USE_OPTIONAL_FOR_NON_REQUIRED_CONFIG).toString()) : USE_OPTIONAL_FOR_NON_REQUIRED_DEFAULT;
   }
-
-
-  /**
-   * schema cache size
-   *
-   * @return
-   */
-  public int schemaCacheSize() {
-    return props.containsKey(SCHEMAS_CACHE_SIZE_CONFIG) ?
-            Integer.valueOf(props.get(SCHEMAS_CACHE_SIZE_CONFIG).toString()) : SCHEMAS_CACHE_SIZE_DEFAULT;
-
-  }
-
 
   /**
    * decimal format
@@ -91,26 +58,6 @@ public class JsonSchemaConverterConfig {
     return props.containsKey(DECIMAL_FORMAT_CONFIG) ?
             DecimalFormat.valueOf(props.get(DECIMAL_FORMAT_CONFIG).toString().toUpperCase(Locale.ROOT)) : DECIMAL_FORMAT_DEFAULT;
 
-  }
-
-
-  /**
-   * auto registry schema
-   * @return
-   */
-  public boolean autoRegistrySchema(){
-    return props.containsKey(AUTO_REGISTER_SCHEMAS) ?
-            Boolean.valueOf(props.get(AUTO_REGISTER_SCHEMAS).toString()) : AUTO_REGISTER_SCHEMAS_DEFAULT;
-  }
-
-
-  /**
-   * set serde schema registry id
-   * @return
-   */
-  public long serdeSchemaRegistryId(){
-    return props.containsKey(SERDE_SCHEMA_REGISTRY_ID) ?
-            Long.valueOf(props.get(SERDE_SCHEMA_REGISTRY_ID).toString()) : -1;
   }
 
 }

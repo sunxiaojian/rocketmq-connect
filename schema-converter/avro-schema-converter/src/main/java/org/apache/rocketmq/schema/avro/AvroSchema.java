@@ -19,6 +19,7 @@ package org.apache.rocketmq.schema.avro;
 
 import org.apache.avro.Schema;
 import org.apache.rocketmq.schema.common.ParsedSchema;
+import org.apache.rocketmq.schema.registry.common.model.SchemaType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,8 +91,8 @@ public class AvroSchema implements ParsedSchema<Schema> {
   }
 
   @Override
-  public String schemaType() {
-    return "AVRO";
+  public SchemaType schemaType() {
+    return SchemaType.AVRO;
   }
 
   @Override

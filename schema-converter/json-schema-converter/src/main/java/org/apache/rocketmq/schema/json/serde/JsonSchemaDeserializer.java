@@ -19,6 +19,10 @@ package org.apache.rocketmq.schema.json.serde;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.openmessaging.connector.api.data.SchemaAndValue;
+import org.apache.rocketmq.schema.common.Deserializer;
+import org.apache.rocketmq.schema.common.LocalSchemaRegistryClient;
+import org.apache.rocketmq.schema.json.JsonSchema;
+import org.apache.rocketmq.schema.json.JsonSchemaAndValue;
 import org.apache.rocketmq.schema.json.JsonSchemaConverterConfig;
 import org.apache.rocketmq.schema.json.JsonSchemaData;
 import org.apache.rocketmq.schema.registry.client.SchemaRegistryClient;
@@ -34,23 +38,22 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
+
 /**
  * json schema deserializer
  */
-public class JsonSchemaDeserializer {
+public class JsonSchemaDeserializer implements Deserializer<JsonSchemaAndValue> {
 
     protected static final int idSize = 8;
-    private final SchemaRegistryClient registryClient;
+    private LocalSchemaRegistryClient schemaRegistryClient;
     private final ObjectMapper OBJECT_MAPPER = JacksonMapper.INSTANCE;
-    private final JsonSchemaData jsonSchemaData;
-    private final JsonSchemaConverterConfig jsonSchemaConverterConfig;
+    private JsonSchemaConverterConfig jsonSchemaConverterConfig;
 
-    public JsonSchemaDeserializer(Map<String, ?> props, SchemaRegistryClient registryClient) {
-        this.registryClient = registryClient;
-        this.jsonSchemaConverterConfig = new JsonSchemaConverterConfig(props);
-        this.jsonSchemaData = new JsonSchemaData(this.jsonSchemaConverterConfig);
+    @Override
+    public void configure(Map<String, ?> props) {
+       this.jsonSchemaConverterConfig = new JsonSchemaConverterConfig(props);
+       this.schemaRegistryClient = new LocalSchemaRegistryClient(this.jsonSchemaConverterConfig);
     }
-
 
     /**
      * deserialize
@@ -60,43 +63,41 @@ public class JsonSchemaDeserializer {
      * @param payload
      * @return
      */
-    public SchemaAndValue deserialize(String topic, boolean isKey, byte[] payload) {
+    @Override
+    public JsonSchemaAndValue deserialize(String topic, boolean isKey, byte[] payload) {
         if (payload == null) {
             return null;
         }
         String subjectName = TopicNameStrategy.subjectName(topic, isKey);
+        GetSchemaResponse response = schemaRegistryClient.getSchemaLatestVersion(subjectName);
+        ByteBuffer buffer = ByteBuffer.wrap(payload);
+        long schemaId = buffer.getLong();
+        if (schemaId != response.getRecordId()) {
+            throw new RuntimeException("Deserialization schema id cannot match, ser schemaId " + schemaId + ", DeSer schema id" + response.getRecordId());
+        }
+        int length = buffer.limit() - idSize;
+        int start = buffer.position() + buffer.arrayOffset();
+
+        // Return JsonNode if type is null
+        JsonNode value = null;
         try {
-            GetSchemaResponse response = registryClient.getSchemaBySubject(subjectName);
-            ByteBuffer buffer = ByteBuffer.wrap(payload);
-            long schemaId = buffer.getLong();
-            if (schemaId != response.getRecordId()) {
-                throw new RuntimeException("Deserialization schema id cannot match, ser schemaId " + schemaId + ", DeSer schema id" + response.getRecordId());
-            }
-            int length = buffer.limit() - idSize;
-            int start = buffer.position() + buffer.arrayOffset();
-
-            // Return JsonNode if type is null
-            JsonNode value = OBJECT_MAPPER.readTree(new ByteArrayInputStream(buffer.array(), start, length));
-
-            // load json schema
-            SchemaLoader.SchemaLoaderBuilder builder = SchemaLoader
-                    .builder()
-                    .useDefaults(true)
-                    .draftV7Support();
-            JSONObject jsonObject = new JSONObject(response.getIdl());
-            builder.schemaJson(jsonObject);
-            SchemaLoader loader = builder.build();
-            Schema schema = loader.load().build();
-            // validate schema
-            if (jsonSchemaConverterConfig.validate()) {
-                schema.validate(value);
-            }
-            io.openmessaging.connector.api.data.Schema connectSchema = jsonSchemaData.toConnectSchema(schema, 1);
-            return new SchemaAndValue(connectSchema, value);
-        } catch (RestClientException e) {
-            throw new RuntimeException(e);
+            value = OBJECT_MAPPER.readTree(new ByteArrayInputStream(buffer.array(), start, length));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+        // load json schema
+        SchemaLoader.SchemaLoaderBuilder schemaLoaderBuilder = SchemaLoader
+                .builder()
+                .useDefaults(true)
+                .draftV7Support();
+        JSONObject jsonObject = new JSONObject(response.getIdl());
+        schemaLoaderBuilder.schemaJson(jsonObject);
+        Schema schema = schemaLoaderBuilder.build().load().build();
+        // validate schema
+        if (jsonSchemaConverterConfig.validate()) {
+            schema.validate(value);
+        }
+        return new JsonSchemaAndValue(new JsonSchema(schema), value);
     }
 }

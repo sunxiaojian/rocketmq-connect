@@ -98,17 +98,16 @@ public class JsonSchemaData {
 
     public JsonSchemaData(JsonSchemaConverterConfig jsonSchemaDataConfig) {
         this.config = jsonSchemaDataConfig;
-
         fromConnectSchemaCache = Collections.synchronizedMap(new LinkedHashMap<Schema, org.everit.json.schema.Schema>(300, 1.1F, true) {
             @Override
             protected boolean removeEldestEntry(Map.Entry<Schema, org.everit.json.schema.Schema> eldest) {
-                return this.size() > jsonSchemaDataConfig.schemaCacheSize();
+                return this.size() > jsonSchemaDataConfig.getSchemasCacheSize();
             }
         });
         toConnectSchemaCache = Collections.synchronizedMap(new LinkedHashMap<org.everit.json.schema.Schema, Schema>(300, 1.1F, true) {
             @Override
             protected boolean removeEldestEntry(Map.Entry<org.everit.json.schema.Schema, Schema> eldest) {
-                return this.size() > jsonSchemaDataConfig.schemaCacheSize();
+                return this.size() > jsonSchemaDataConfig.getSchemasCacheSize();
             }
         });
     }

@@ -71,7 +71,7 @@ public class AvroSerializer implements Serializer<AvroSchema> {
         org.apache.avro.Schema avroSchema = schema.rawSchema();
         try {
             RegisterSchemaRequest registerSchemaRequest = RegisterSchemaRequest.builder()
-                    .schemaType(SchemaType.AVRO)
+                    .schemaType(schema.schemaType())
                     .compatibility(Compatibility.BACKWARD)
                     .schemaIdl(avroSchema.toString()).build();
             GetSchemaResponse getSchemaResponse = schemaRegistryClient.getRegistrySchema(subjectName, schema.name(), registerSchemaRequest);

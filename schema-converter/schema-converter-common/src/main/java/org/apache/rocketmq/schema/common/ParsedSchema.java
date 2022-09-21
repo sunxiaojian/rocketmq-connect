@@ -16,6 +16,9 @@
  */
 package org.apache.rocketmq.schema.common;
 
+import org.apache.rocketmq.schema.registry.common.model.SchemaType;
+import java.util.Objects;
+
 /**
  * parsed schema
  */
@@ -24,7 +27,7 @@ public interface ParsedSchema<T> {
      * get schema type
      * @return
      */
-    String schemaType();
+    SchemaType schemaType();
 
     /**
      * raw schema
@@ -57,4 +60,12 @@ public interface ParsedSchema<T> {
      */
     String name();
 
+    /**
+     * deep equals
+     * @param schema
+     * @return
+     */
+    default boolean deepEquals(ParsedSchema schema) {
+        return Objects.equals(rawSchema(), schema.rawSchema());
+    }
 }

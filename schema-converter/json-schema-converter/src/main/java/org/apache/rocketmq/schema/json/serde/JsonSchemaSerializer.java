@@ -17,21 +17,17 @@
 
 package org.apache.rocketmq.schema.json.serde;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.openmessaging.connector.api.data.Schema;
+import org.apache.rocketmq.schema.common.LocalSchemaRegistryClient;
+import org.apache.rocketmq.schema.common.Serializer;
+import org.apache.rocketmq.schema.json.JsonSchema;
 import org.apache.rocketmq.schema.json.JsonSchemaConverterConfig;
-import org.apache.rocketmq.schema.json.JsonSchemaData;
-import org.apache.rocketmq.schema.json.JsonSchemaUtils;
-import org.apache.rocketmq.schema.registry.client.SchemaRegistryClient;
-import org.apache.rocketmq.schema.registry.client.exceptions.RestClientException;
+import org.apache.rocketmq.schema.json.util.JsonSchemaUtils;
 import org.apache.rocketmq.schema.registry.client.exceptions.SerializationException;
 import org.apache.rocketmq.schema.registry.client.rest.JacksonMapper;
 import org.apache.rocketmq.schema.registry.common.dto.GetSchemaResponse;
 import org.apache.rocketmq.schema.registry.common.dto.RegisterSchemaRequest;
-import org.apache.rocketmq.schema.registry.common.dto.RegisterSchemaResponse;
 import org.apache.rocketmq.schema.registry.common.model.Compatibility;
-import org.apache.rocketmq.schema.registry.common.model.SchemaType;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -42,17 +38,16 @@ import java.util.Map;
 /**
  * json schema serializer
  */
-public class JsonSchemaSerializer{
+public class JsonSchemaSerializer implements Serializer<JsonSchema> {
     protected static final int idSize = 8;
-    private SchemaRegistryClient registryClient;
+    private LocalSchemaRegistryClient registryClient;
+    private JsonSchemaConverterConfig converterConfig;
     private final ObjectMapper OBJECT_MAPPER = JacksonMapper.INSTANCE;
-    private final JsonSchemaData jsonSchemaData;
-    private final JsonSchemaConverterConfig jsonSchemaConverterConfig;
 
-    public JsonSchemaSerializer(Map<String, ?> configs,SchemaRegistryClient registryClient) {
-        this.registryClient = registryClient;
-        this.jsonSchemaConverterConfig = new JsonSchemaConverterConfig(configs);
-        this.jsonSchemaData = new JsonSchemaData(jsonSchemaConverterConfig);
+    @Override
+    public void configure(Map<String, ?> props) {
+        this.converterConfig = new JsonSchemaConverterConfig(props);
+        this.registryClient =  new LocalSchemaRegistryClient(this.converterConfig);
     }
 
     /**
@@ -63,74 +58,36 @@ public class JsonSchemaSerializer{
      * @param schema
      * @return
      */
-    public byte[] serialize(String topic, boolean isKey, Schema schema, Object value) {
+    public byte[] serialize(String topic, boolean isKey, JsonSchema schema, Object value) {
         if (value == null){
             return null;
         }
         String subjectName = TopicNameStrategy.subjectName(topic, isKey);
-        org.everit.json.schema.Schema jsonSchema = jsonSchemaData.fromJsonSchema(schema);
         try {
-            long schemaId = getSchemaId(schema, subjectName, jsonSchema);
-            JsonNode jsonValue = jsonSchemaData.fromConnectData(schema, value);
+            RegisterSchemaRequest schemaRequest = RegisterSchemaRequest
+                    .builder()
+                    .schemaType(schema.schemaType())
+                    .compatibility(Compatibility.BACKWARD)
+                    .schemaIdl(schema.toString())
+                    .desc(schema.name())
+                    .build();
+
+            GetSchemaResponse getSchemaResponse = registryClient.getRegistrySchema(subjectName, schema.name(), schemaRequest);
+            long schemaId = getSchemaResponse.getRecordId();
+            schema = new JsonSchema(getSchemaResponse.getIdl());
             // validate json value
-            if (jsonSchemaConverterConfig.validate()) {
-                JsonSchemaUtils.validate(jsonSchema, jsonValue);
+            if (converterConfig.validate()) {
+                JsonSchemaUtils.validate(schema.rawSchema(), value);
             }
             // serialize value
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             out.write(ByteBuffer.allocate(idSize).putLong(schemaId).array());
-            out.write(OBJECT_MAPPER.writeValueAsBytes(jsonValue));
+            out.write(OBJECT_MAPPER.writeValueAsBytes(value));
             byte[] bytes = out.toByteArray();
             out.close();
             return bytes;
         } catch (IOException e) {
             throw new SerializationException("Error serializing JSON message", e);
-        } catch (RestClientException e) {
-            throw new RuntimeException(e);
         }
     }
-
-    /**
-     * get schema id
-     * @param schema
-     * @param subjectName
-     * @param jsonSchema
-     * @return
-     * @throws IOException
-     * @throws RestClientException
-     */
-    private long getSchemaId(Schema schema, String subjectName, org.everit.json.schema.Schema jsonSchema) throws IOException, RestClientException {
-        long schemaId = 0 ;
-        if (jsonSchemaConverterConfig.serdeSchemaRegistryId() > -1){
-            schemaId = jsonSchemaConverterConfig.serdeSchemaRegistryId();
-            // todo  Specify the ID for serialization， get schema info
-            return schemaId;
-        }
-        try {
-            GetSchemaResponse schemaResponse = registryClient.getSchemaBySubject(subjectName);
-            if (schemaResponse != null) {
-                schemaId = schemaResponse.getRecordId();
-            }
-        } catch (RestClientException e) {}
-        if (!jsonSchemaConverterConfig.autoRegistrySchema() && schemaId == 0){
-            throw new RuntimeException("No related schema found");
-        }
-        if (jsonSchemaConverterConfig.autoRegistrySchema() && schemaId == 0 ){
-            RegisterSchemaResponse registerSchemaResponse = registryClient.registerSchema(
-                    subjectName,
-                    schema.getName() == null || schema.getName().equals("")
-                            ? subjectName : schema.getName(),
-                    RegisterSchemaRequest
-                            .builder()
-                            .schemaType(SchemaType.JSON)
-                            .compatibility(Compatibility.BACKWARD)
-                            .schemaIdl(jsonSchema.toString())
-                            .desc(schema.getDoc())
-                            .build()
-            );
-            schemaId = registerSchemaResponse.getRecordId();
-        }
-        return schemaId;
-    }
-
 }
