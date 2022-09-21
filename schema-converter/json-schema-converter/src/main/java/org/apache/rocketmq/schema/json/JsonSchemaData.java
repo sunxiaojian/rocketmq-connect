@@ -67,7 +67,6 @@ import java.util.stream.Collectors;
 public class JsonSchemaData {
 
     public static final String NAMESPACE = "org.apache.rocketmq.connect.json";
-
     public static final String KEY_FIELD = "key";
     public static final String VALUE_FIELD = "value";
 
@@ -604,7 +603,6 @@ public class JsonSchemaData {
         if (title != null) {
             builder.name(title);
         }
-        // Included Kafka Connect version takes priority, fall back to schema registry version
         Integer connectVersion = (Integer) jsonSchema.getUnprocessedProperties()
                 .get(CONNECT_VERSION_PROP);
         if (connectVersion != null) {
