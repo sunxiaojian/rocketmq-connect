@@ -16,6 +16,8 @@
  */
 package org.apache.rocketmq.schema.json;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import java.util.Objects;
 
 /**
@@ -23,9 +25,9 @@ import java.util.Objects;
  */
 public class JsonSchemaAndValue {
     private JsonSchema schema;
-    private Object value;
+    private JsonNode value;
     public JsonSchemaAndValue(){}
-    public JsonSchemaAndValue(JsonSchema jsonSchema, Object value) {
+    public JsonSchemaAndValue(JsonSchema jsonSchema, JsonNode value) {
         this.schema = jsonSchema;
         this.value = value;
     }
@@ -38,11 +40,11 @@ public class JsonSchemaAndValue {
         this.schema = schema;
     }
 
-    public Object getValue() {
+    public JsonNode getValue() {
         return value;
     }
 
-    public void setValue(Object value) {
+    public void setValue(JsonNode value) {
         this.value = value;
     }
 

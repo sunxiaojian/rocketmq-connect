@@ -73,7 +73,8 @@ public class JsonSchemaConverter implements RecordConverter {
         }
         JsonSchemaAndValue jsonSchemaAndValue = deserializer.deserialize(topic, isKey, value);
         Schema schema = jsonSchemaData.toConnectSchema(jsonSchemaAndValue.getSchema().rawSchema());
-        return new SchemaAndValue(schema, jsonSchemaAndValue.getValue());
+        Object result = JsonSchemaData.toConnectData(schema, jsonSchemaAndValue.getValue());
+        return new SchemaAndValue(schema, result);
     }
 
 }

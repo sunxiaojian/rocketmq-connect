@@ -113,35 +113,6 @@ public class JsonSchemaData {
     }
 
     /**
-     * from json schema
-     * @param schema
-     * @return
-     */
-    public org.everit.json.schema.Schema fromJsonSchema(Schema schema) {
-        return rawSchemaFromConnectSchema(schema);
-    }
-
-    /**
-     * no optional schema
-     *
-     * @param schema
-     * @return
-     */
-    private static Schema nonOptionalSchema(Schema schema) {
-        return new Schema(schema.getName(),
-                schema.getFieldType(),
-                false,
-                schema.getDefaultValue(),
-                schema.getVersion(),
-                schema.getDoc(),
-                FieldType.STRUCT.equals(schema.getFieldType()) ? schema.getFields() : null,
-                (FieldType.MAP.equals(schema.getFieldType())) ? schema.getKeySchema() : null,
-                (FieldType.MAP.equals(schema.getFieldType()) || FieldType.ARRAY.equals(schema.getFieldType())) ? schema.getValueSchema() : null,
-                schema.getParameters()
-        );
-    }
-
-    /**
      * to connect data
      *
      * @param schema
@@ -346,6 +317,36 @@ public class JsonSchemaData {
         return builder.unprocessedProperties(unprocessedProps).build();
     }
 
+
+    /**
+     * from json schema
+     * @param schema
+     * @return
+     */
+    public org.everit.json.schema.Schema fromJsonSchema(Schema schema) {
+        return rawSchemaFromConnectSchema(schema);
+    }
+
+    /**
+     * no optional schema
+     *
+     * @param schema
+     * @return
+     */
+    private static Schema nonOptionalSchema(Schema schema) {
+        return new Schema(schema.getName(),
+                schema.getFieldType(),
+                false,
+                schema.getDefaultValue(),
+                schema.getVersion(),
+                schema.getDoc(),
+                FieldType.STRUCT.equals(schema.getFieldType()) ? schema.getFields() : null,
+                (FieldType.MAP.equals(schema.getFieldType())) ? schema.getKeySchema() : null,
+                (FieldType.MAP.equals(schema.getFieldType()) || FieldType.ARRAY.equals(schema.getFieldType())) ? schema.getValueSchema() : null,
+                schema.getParameters()
+        );
+    }
+
     /**
      * convert json schema to connect schema
      *
@@ -367,90 +368,6 @@ public class JsonSchemaData {
         Schema resultSchema = toConnectSchema(schema, version, false);
         toConnectSchemaCache.put(schema, resultSchema);
         return resultSchema;
-    }
-
-
-
-    /**
-     * all of to connect schema
-     * @param combinedSchema
-     * @param version
-     * @param forceOptional
-     * @return
-     */
-    private Schema allOfToConnectSchema(CombinedSchema combinedSchema, Integer version, boolean forceOptional) {
-        ConstSchema constSchema = null;
-        EnumSchema enumSchema = null;
-        NumberSchema numberSchema = null;
-        StringSchema stringSchema = null;
-        for (org.everit.json.schema.Schema subSchema : combinedSchema.getSubschemas()) {
-            if (subSchema instanceof ConstSchema) {
-                constSchema = (ConstSchema) subSchema;
-            } else if (subSchema instanceof EnumSchema) {
-                enumSchema = (EnumSchema) subSchema;
-            } else if (subSchema instanceof NumberSchema) {
-                numberSchema = (NumberSchema) subSchema;
-            } else if (subSchema instanceof StringSchema) {
-                stringSchema = (StringSchema) subSchema;
-            }
-        }
-        if (constSchema != null && stringSchema != null) {
-            return toConnectSchema(stringSchema, version, forceOptional);
-        } else if (constSchema != null && numberSchema != null) {
-            return toConnectSchema(numberSchema, version, forceOptional);
-        } else if (enumSchema != null && stringSchema != null) {
-            return toConnectSchema(enumSchema, version, forceOptional);
-        } else if (numberSchema != null
-                && stringSchema != null
-                && stringSchema.getFormatValidator() != null) {
-            return toConnectSchema(numberSchema, version, forceOptional);
-        } else {
-            throw new IllegalArgumentException("Unsupported criterion "
-                    + combinedSchema.getCriterion() + " for " + combinedSchema);
-        }
-    }
-    private static boolean isSimpleSchema(Schema fieldSchema, JsonNode value) {
-        switch (fieldSchema.getFieldType()) {
-            case INT8:
-            case INT16:
-            case INT32:
-            case INT64:
-                return value.isIntegralNumber();
-            case FLOAT32:
-            case FLOAT64:
-                return value.isNumber();
-            case BOOLEAN:
-                return value.isBoolean();
-            case STRING:
-                return value.isTextual();
-            case BYTES:
-                return value.isBinary() || value.isBigDecimal();
-            case ARRAY:
-                return value.isArray();
-            case MAP:
-                return value.isObject() || value.isArray();
-            case STRUCT:
-                return false;
-            default:
-                throw new IllegalArgumentException("Unsupported type " + fieldSchema.getFieldType());
-        }
-    }
-
-    private static int matchStructSchema(Schema fieldSchema, JsonNode value) {
-        if (fieldSchema.getFieldType() != FieldType.STRUCT || !value.isObject()) {
-            return -1;
-        }
-        Set<String> schemaFields = fieldSchema.getFields()
-                .stream()
-                .map(Field::getName)
-                .collect(Collectors.toSet());
-        Set<String> objectFields = new HashSet<>();
-        for (Iterator<Map.Entry<String, JsonNode>> iter = value.fields(); iter.hasNext(); ) {
-            objectFields.add(iter.next().getKey());
-        }
-        Set<String> intersectSet = new HashSet<>(schemaFields);
-        intersectSet.retainAll(objectFields);
-        return intersectSet.size();
     }
 
     /**
@@ -629,6 +546,90 @@ public class JsonSchemaData {
 
         Schema result = builder.build();
         return result;
+    }
+
+
+
+    /**
+     * all of to connect schema
+     * @param combinedSchema
+     * @param version
+     * @param forceOptional
+     * @return
+     */
+    private Schema allOfToConnectSchema(CombinedSchema combinedSchema, Integer version, boolean forceOptional) {
+        ConstSchema constSchema = null;
+        EnumSchema enumSchema = null;
+        NumberSchema numberSchema = null;
+        StringSchema stringSchema = null;
+        for (org.everit.json.schema.Schema subSchema : combinedSchema.getSubschemas()) {
+            if (subSchema instanceof ConstSchema) {
+                constSchema = (ConstSchema) subSchema;
+            } else if (subSchema instanceof EnumSchema) {
+                enumSchema = (EnumSchema) subSchema;
+            } else if (subSchema instanceof NumberSchema) {
+                numberSchema = (NumberSchema) subSchema;
+            } else if (subSchema instanceof StringSchema) {
+                stringSchema = (StringSchema) subSchema;
+            }
+        }
+        if (constSchema != null && stringSchema != null) {
+            return toConnectSchema(stringSchema, version, forceOptional);
+        } else if (constSchema != null && numberSchema != null) {
+            return toConnectSchema(numberSchema, version, forceOptional);
+        } else if (enumSchema != null && stringSchema != null) {
+            return toConnectSchema(enumSchema, version, forceOptional);
+        } else if (numberSchema != null
+                && stringSchema != null
+                && stringSchema.getFormatValidator() != null) {
+            return toConnectSchema(numberSchema, version, forceOptional);
+        } else {
+            throw new IllegalArgumentException("Unsupported criterion "
+                    + combinedSchema.getCriterion() + " for " + combinedSchema);
+        }
+    }
+    private static boolean isSimpleSchema(Schema fieldSchema, JsonNode value) {
+        switch (fieldSchema.getFieldType()) {
+            case INT8:
+            case INT16:
+            case INT32:
+            case INT64:
+                return value.isIntegralNumber();
+            case FLOAT32:
+            case FLOAT64:
+                return value.isNumber();
+            case BOOLEAN:
+                return value.isBoolean();
+            case STRING:
+                return value.isTextual();
+            case BYTES:
+                return value.isBinary() || value.isBigDecimal();
+            case ARRAY:
+                return value.isArray();
+            case MAP:
+                return value.isObject() || value.isArray();
+            case STRUCT:
+                return false;
+            default:
+                throw new IllegalArgumentException("Unsupported type " + fieldSchema.getFieldType());
+        }
+    }
+
+    private static int matchStructSchema(Schema fieldSchema, JsonNode value) {
+        if (fieldSchema.getFieldType() != FieldType.STRUCT || !value.isObject()) {
+            return -1;
+        }
+        Set<String> schemaFields = fieldSchema.getFields()
+                .stream()
+                .map(Field::getName)
+                .collect(Collectors.toSet());
+        Set<String> objectFields = new HashSet<>();
+        for (Iterator<Map.Entry<String, JsonNode>> iter = value.fields(); iter.hasNext(); ) {
+            objectFields.add(iter.next().getKey());
+        }
+        Set<String> intersectSet = new HashSet<>(schemaFields);
+        intersectSet.retainAll(objectFields);
+        return intersectSet.size();
     }
 
     /**
