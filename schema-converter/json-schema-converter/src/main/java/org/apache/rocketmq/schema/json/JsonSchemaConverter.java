@@ -16,6 +16,7 @@
  */
 package org.apache.rocketmq.schema.json;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.openmessaging.connector.api.data.RecordConverter;
 import io.openmessaging.connector.api.data.Schema;
 import io.openmessaging.connector.api.data.SchemaAndValue;
@@ -63,7 +64,8 @@ public class JsonSchemaConverter implements RecordConverter {
             return null;
         }
         org.everit.json.schema.Schema jsonSchema = jsonSchemaData.fromJsonSchema(schema);
-        return serializer.serialize(topic, isKey, new JsonSchema(jsonSchema), value);
+        JsonNode jsonNode =  jsonSchemaData.fromConnectData(schema, value);
+        return serializer.serialize(topic, isKey, new JsonSchema(jsonSchema), jsonNode);
     }
 
     @Override
