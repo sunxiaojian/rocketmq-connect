@@ -162,7 +162,7 @@ public abstract class AbstractLocalSchemaRegistryClient {
             schemaRegistryClient.getSchemaBySubject(cluster, namespace, subject);
             return Boolean.TRUE;
         } catch (RestClientException | IOException e) {
-            if (e instanceof  RestClientException) {
+            if (e instanceof RestClientException) {
                 return Boolean.FALSE;
             } else {
                 throw new RuntimeException(e);

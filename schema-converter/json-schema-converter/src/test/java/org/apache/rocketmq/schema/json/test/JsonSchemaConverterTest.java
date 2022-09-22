@@ -2,10 +2,12 @@ package org.apache.rocketmq.schema.json.test;
 
 
 import io.openmessaging.connector.api.data.Schema;
+import io.openmessaging.connector.api.data.SchemaAndValue;
 import io.openmessaging.connector.api.data.SchemaBuilder;
 import io.openmessaging.connector.api.data.Struct;
 import org.apache.rocketmq.schema.json.JsonSchemaConverter;
 import org.apache.rocketmq.schema.json.JsonSchemaConverterConfig;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -18,6 +20,8 @@ import java.util.Map;
 public class JsonSchemaConverterTest {
 
     private JsonSchemaConverter jsonSchemaConverter;
+
+    private String topic = "json-test-topic-05";
 
     @Before
     public void init(){
@@ -44,15 +48,10 @@ public class JsonSchemaConverterTest {
         struct.put("test-int", new Integer(1000000));
         struct.put("test-bool", true);
         struct.put("test-str", "test-str");
-        jsonSchemaConverter.fromConnectData("test-topic-05", schema, struct);
-        
+        byte[] convertData = jsonSchemaConverter.fromConnectData(topic, schema, struct);
+        SchemaAndValue schemaAndValue = jsonSchemaConverter.toConnectData(topic, convertData);
+        Assert.assertEquals(schema, schemaAndValue.schema());
+        Assert.assertEquals(struct, schemaAndValue.value());
     }
 
-    /**
-     * To connect record
-     */
-    @Test
-    public void toConnectRecordTest(){
-
-    }
 }
