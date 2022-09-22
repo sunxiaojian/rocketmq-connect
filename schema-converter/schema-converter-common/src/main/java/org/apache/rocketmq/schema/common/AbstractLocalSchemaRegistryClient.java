@@ -47,7 +47,7 @@ public abstract class AbstractLocalSchemaRegistryClient {
     protected final boolean useLatestVersion;
     private Cache<String , Boolean> cache = CacheBuilder.newBuilder()
             .initialCapacity(1000)
-            .expireAfterWrite(, TimeUnit.SECONDS)
+            .expireAfterWrite(60, TimeUnit.SECONDS)
             .build();
     public AbstractLocalSchemaRegistryClient(AbstractConverterConfig config){
         this.schemaRegistryClient = SchemaRegistryClientFactory.newClient(config.getSchemaRegistryUrl(),null);
