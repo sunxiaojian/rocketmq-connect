@@ -69,9 +69,7 @@ public class JsonSchemaUtils {
             if (value instanceof ArrayNode) {
                 jsonObject = objectMapper.treeToValue(((ArrayNode) value), JSONArray.class);
             } else if (value instanceof JsonNode) {
-                ;
                 jsonObject = new JSONObject(objectMapper.writeValueAsString(value));
-//                jsonObject = objectMapper.treeToValue((TreeNode) value, JSONObject.class);
             } else if (value.getClass().isArray()) {
                 jsonObject = objectMapper.convertValue(value, JSONArray.class);
             } else {
