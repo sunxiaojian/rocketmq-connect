@@ -1553,9 +1553,7 @@ public class AvroData {
 
     String type = schema.getProp(CONNECT_TYPE);
     String logicalType = schema.getProp(AVRO_LOGICAL_TYPE_PROP);
-
     final SchemaBuilder builder;
-
     switch (schema.getType()) {
       case BOOLEAN:
         builder = SchemaBuilder.bool();
@@ -1729,9 +1727,6 @@ public class AvroData {
       }
 
       case NULL:
-        // There's no dedicated null type in Connect. However, it also doesn't make sense to have a
-        // standalone null type -- it wouldn't provide any useful information. Instead, it should
-        // only be used in union types.
         throw new ConnectException("Standalone null schemas are not supported by this converter");
 
       default:
@@ -2228,9 +2223,6 @@ public class AvroData {
       return false;
     }
 
-    // Add a temporary value to the cache to avoid cycles. As long as we recurse only at the end of
-    // the method, we can safely default to true here. The cache is updated at the end of the method
-    // with the actual comparison result.
     SchemaPair sp = new SchemaPair(src, that);
     Boolean cacheHit = cache.putIfAbsent(sp, true);
     if (cacheHit != null) {
@@ -2376,9 +2368,7 @@ public class AvroData {
     }
   }
 
-  /**
-   * Class that holds the context for performing {@code fromConnectSchema}
-   */
+
   private static class FromConnectContext {
     //SchemaMap is used to resolve references that need to mapped as types
     private final Map<Schema, org.apache.avro.Schema> schemaMap;
