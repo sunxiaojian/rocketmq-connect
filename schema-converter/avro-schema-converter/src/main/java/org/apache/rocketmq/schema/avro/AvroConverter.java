@@ -60,8 +60,12 @@ public class AvroConverter implements RecordConverter {
      */
     @Override
     public byte[] fromConnectData(String topic, Schema schema, Object value) {
+        if (value == null){
+            return null;
+        }
         org.apache.avro.Schema avroSchema = avroData.fromConnectSchema(schema);
-        return serializer.serialize(topic, isKey, new AvroSchema(avroSchema), value);
+        Object object = avroData.fromConnectData(schema, value);
+        return serializer.serialize(topic, isKey, new AvroSchema(avroSchema), object);
     }
 
     @Override

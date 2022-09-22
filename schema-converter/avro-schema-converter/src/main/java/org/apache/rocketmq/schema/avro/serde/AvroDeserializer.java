@@ -71,7 +71,7 @@ public class AvroDeserializer implements Deserializer<GenericContainerWithVersio
             throw new RuntimeException("The record id is inconsistent");
         }
         String avroSchemaIdl = schemaResponse.getIdl();
-        Integer version = 0;
+        Integer version = null;
         AvroSchema avroSchema = new AvroSchema(avroSchemaIdl);
         Object result = this.avroDatumReaderFactory.read(byteBuffer, avroSchema.rawSchema(), null);
         if (avroSchema.rawSchema().getType().equals(Schema.Type.RECORD)) {
