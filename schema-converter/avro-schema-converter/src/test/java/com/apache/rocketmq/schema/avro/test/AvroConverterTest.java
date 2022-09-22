@@ -40,6 +40,7 @@ public class AvroConverterTest {
                 .field("test_str", SchemaBuilder.string().build())
                 .field("test_str_01", SchemaBuilder.string().build())
                 .field("test_str_02", SchemaBuilder.string().build())
+                .field("test_str_03", SchemaBuilder.string().build())
                 .build();
         Struct struct =  new Struct(schema);
         struct.put("test_int", new Integer(1000000));
@@ -47,6 +48,7 @@ public class AvroConverterTest {
         struct.put("test_str", "test-str");
         struct.put("test_str_01", "test_str_01");
         struct.put("test_str_02", "test_str_02");
+        struct.put("test_str_03", "test_str_03");
         byte[] value = avroConverter.fromConnectData(topic, schema, struct);
         SchemaAndValue schemaAndValue = avroConverter.toConnectData(topic, value);
         Assert.assertEquals(schema, schemaAndValue.schema());

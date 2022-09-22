@@ -129,7 +129,7 @@ public abstract class AbstractLocalSchemaRegistryClient {
                 .owner(request.getOwner())
                 .build();
         try {
-            UpdateSchemaResponse updateSchemaResponse = schemaRegistryClient.updateSchema(cluster, namespace, updateSchemaRequest);
+            UpdateSchemaResponse updateSchemaResponse = schemaRegistryClient.updateSchema(cluster, namespace, subject, schemaName, updateSchemaRequest);
             GetSchemaResponse getSchemaResponse = new GetSchemaResponse();
             getSchemaResponse.setRecordId(updateSchemaResponse.getRecordId());
             return SchemaResponse.builder()
