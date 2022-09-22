@@ -47,7 +47,7 @@ public abstract class AbstractLocalSchemaRegistryClient {
     protected final boolean useLatestVersion;
     private Cache<String , Boolean> cache = CacheBuilder.newBuilder()
             .initialCapacity(1000)
-            .expireAfterWrite(60, TimeUnit.SECONDS)
+            .expireAfterWrite(, TimeUnit.SECONDS)
             .build();
     public AbstractLocalSchemaRegistryClient(AbstractConverterConfig config){
         this.schemaRegistryClient = SchemaRegistryClientFactory.newClient(config.getSchemaRegistryUrl(),null);
@@ -159,25 +159,14 @@ public abstract class AbstractLocalSchemaRegistryClient {
      */
     public Boolean checkSubjectExists(String namespace, String subject){
         try {
-            String key = cluster.concat("_").concat(namespace).concat("_").concat(subject);
-            return cache.get(key, new Callable<Boolean>() {
-                @Override
-                public Boolean call() throws Exception {
-                    try {
-                        schemaRegistryClient.getSchemaBySubject(cluster, namespace, subject);
-                        return Boolean.TRUE;
-                    } catch (RestClientException | IOException e) {
-                        if (e instanceof  RestClientException) {
-                            return Boolean.FALSE;
-                        } else {
-                            throw new RuntimeException(e);
-                        }
-                    }
-
-                }
-            });
-        }  catch (ExecutionException e) {
-            throw new RuntimeException(e);
+            schemaRegistryClient.getSchemaBySubject(cluster, namespace, subject);
+            return Boolean.TRUE;
+        } catch (RestClientException | IOException e) {
+            if (e instanceof  RestClientException) {
+                return Boolean.FALSE;
+            } else {
+                throw new RuntimeException(e);
+            }
         }
     }
 

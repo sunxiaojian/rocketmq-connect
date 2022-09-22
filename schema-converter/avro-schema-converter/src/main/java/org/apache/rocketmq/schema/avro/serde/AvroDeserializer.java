@@ -69,7 +69,7 @@ public class AvroDeserializer implements Deserializer<GenericContainerWithVersio
         // TODO  Should get schema by record id
         GetSchemaResponse schemaResponse = this.schemaRegistryClient.getSchemaLatestVersion(AvroData.NAMESPACE, subjectName);
         if (recordId != schemaResponse.getRecordId()){
-            throw new RuntimeException("The record id is inconsistent");
+//            throw new RuntimeException("The record id is inconsistent");
         }
         String avroSchemaIdl = schemaResponse.getIdl();
         Integer version = null;
