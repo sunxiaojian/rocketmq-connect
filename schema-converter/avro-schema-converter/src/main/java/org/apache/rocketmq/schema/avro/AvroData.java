@@ -685,7 +685,7 @@ public class AvroData {
   }
 
   public org.apache.avro.Schema fromConnectSchema(Schema schema) {
-    return fromConnectSchema(schema, new HashMap<Schema, org.apache.avro.Schema>());
+    return fromConnectSchema(schema, new HashMap<>());
   }
 
   public org.apache.avro.Schema fromConnectSchema(Schema schema,
@@ -710,17 +710,18 @@ public class AvroData {
       return cached;
     }
 
+    /**
+     * parse namespace and name
+     */
     String namespace = NAMESPACE;
     String name = DEFAULT_SCHEMA_NAME;
     if (schema.getName() != null) {
       String[] split = splitName(schema.getName());
-      namespace = split[0];
       name = split[1];
+      namespace = split[0];
     }
 
-    // Extra type annotation information for otherwise lossy conversions
     String connectType = null;
-
     final org.apache.avro.Schema baseSchema;
     switch (schema.getFieldType()) {
       case INT8:
@@ -747,6 +748,7 @@ public class AvroData {
         baseSchema = org.apache.avro.SchemaBuilder.builder().booleanType();
         break;
       case STRING:
+        // enum type
         if (enhancedSchemaSupport && schema.getParameters() != null && schema.getParameters().containsKey(AVRO_TYPE_ENUM)) {
           List<String> symbols = new ArrayList<>();
           for (Map.Entry<String, String> entry : schema.getParameters().entrySet()) {
@@ -762,10 +764,12 @@ public class AvroData {
                   .defaultSymbol(enumDefault)
                   .symbols(symbols.toArray(new String[symbols.size()]));
         } else {
+          // common string
           baseSchema = org.apache.avro.SchemaBuilder.builder().stringType();
         }
         break;
       case BYTES:
+        //build convert schema type
         if (isFixedSchema(schema)) {
           baseSchema = org.apache.avro.SchemaBuilder.builder()
                   .fixed(schema.getName())
@@ -776,10 +780,11 @@ public class AvroData {
         }
         // logical type decimal
         if (Decimal.LOGICAL_NAME.equalsIgnoreCase(schema.getName())) {
-          int scale = Integer.parseInt(schema.getParameters().get(Decimal.SCALE_FIELD));
+          Map<String, String> parameters = schema.getParameters();
+          int scale = Integer.parseInt(parameters.get(Decimal.SCALE_FIELD));
           baseSchema.addProp(AVRO_LOGICAL_DECIMAL_SCALE_PROP, new IntNode(scale));
-          if (schema.getParameters().containsKey(CONNECT_AVRO_DECIMAL_PRECISION_PROP)) {
-            String precisionValue = schema.getParameters().get(CONNECT_AVRO_DECIMAL_PRECISION_PROP);
+          if (parameters.containsKey(CONNECT_AVRO_DECIMAL_PRECISION_PROP)) {
+            String precisionValue = parameters.get(CONNECT_AVRO_DECIMAL_PRECISION_PROP);
             int precision = Integer.parseInt(precisionValue);
             baseSchema.addProp(AVRO_LOGICAL_DECIMAL_PRECISION_PROP, new IntNode(precision));
           } else {
@@ -792,16 +797,18 @@ public class AvroData {
         break;
 
       case ARRAY:
-        baseSchema = org.apache.avro.SchemaBuilder.builder().array()
+        baseSchema = org.apache.avro.SchemaBuilder
+                .builder()
+                .array()
                 .items(fromConnectSchemaWithCycle(schema.getValueSchema(), fromConnectContext, false));
         break;
-
       case MAP:
-        // Avro only supports string keys, so we match the representation when possible, but
-        // otherwise fall back on a record representation
-        if (schema.getKeySchema().getFieldType() == FieldType.STRING && !schema.getKeySchema().isOptional()) {
-          baseSchema = org.apache.avro.SchemaBuilder.builder().map().values(
-                  fromConnectSchemaWithCycle(schema.getValueSchema(), fromConnectContext, false));
+        // Avro only supports string keys, so we match the representation when possible, but otherwise fall back on a record representation
+        if (schema.getKeySchema().getFieldType() == FieldType.STRING
+                && !schema.getKeySchema().isOptional()) {
+          baseSchema = org.apache.avro.SchemaBuilder.builder()
+                  .map()
+                  .values(fromConnectSchemaWithCycle(schema.getValueSchema(), fromConnectContext, false));
         } else {
           // Special record name indicates format
           List<org.apache.avro.Schema.Field> fields = new ArrayList<>();
@@ -821,13 +828,13 @@ public class AvroData {
                   fields,
                   KEY_FIELD,
                   schema.getKeySchema(),
-                  null,
+                  schema.getKeySchema().getDoc(),
                   fromConnectContext);
           addAvroRecordField(
                   fields,
                   VALUE_FIELD,
                   schema.getValueSchema(),
-                  null,
+                  schema.getValueSchema().getDoc(),
                   fromConnectContext);
           mapSchema.setFields(fields);
           baseSchema = org.apache.avro.Schema.createArray(mapSchema);
@@ -841,7 +848,12 @@ public class AvroData {
           }
           for (Field field : schema.getFields()) {
             unionSchemas.add(
-                    fromConnectSchemaWithCycle(nonOptional(field.getSchema()), fromConnectContext, true));
+                    fromConnectSchemaWithCycle(
+                            nonOptional(field.getSchema()),
+                            fromConnectContext,
+                            true
+                    )
+            );
           }
           baseSchema = org.apache.avro.Schema.createUnion(unionSchemas);
         } else if (schema.isOptional()) {
@@ -855,15 +867,19 @@ public class AvroData {
                   ? schema.getParameters().get(AVRO_RECORD_DOC)
                   : null;
           baseSchema = org.apache.avro.Schema.createRecord(
-                  name != null ? name : DEFAULT_SCHEMA_NAME, doc, namespace, false);
+                  name != null ? name : DEFAULT_SCHEMA_NAME,
+                  doc,
+                  namespace,
+                  false
+          );
+
           if (schema.getName() != null) {
             fromConnectContext.cycleReferences.put(schema.getName(), baseSchema);
           }
           List<org.apache.avro.Schema.Field> fields = new ArrayList<>();
           for (Field field : schema.getFields()) {
             String fieldDoc = schema.getParameters() != null
-                    ? schema.getParameters()
-                    .get(AVRO_FIELD_DOC_PREFIX + field.getName())
+                    ? schema.getParameters().get(AVRO_FIELD_DOC_PREFIX + field.getName())
                     : null;
             addAvroRecordField(fields, field.getName(), field.getSchema(), fieldDoc, fromConnectContext);
           }
@@ -922,13 +938,6 @@ public class AvroData {
                     scale,
                     precision
             );
-            // We cannot use the Avro Java library's support for the decimal logical type when the
-            // scale is either negative or greater than the precision as this violates the Avro spec
-            // and causes the Avro library to throw an exception, so we fall back in this case to
-            // using the legacy method for encoding decimal logical type information.
-            // Can't add a key/value pair with the CONNECT_AVRO_DECIMAL_PRECISION_PROP key to the
-            // schema's parameters since the parameters for Connect schemas are immutable, so we
-            // just track this in a local boolean variable instead.
             forceLegacyDecimal = true;
           } else {
             org.apache.avro.LogicalTypes.decimal(precision, scale).addToSchema(baseSchema);
@@ -942,19 +951,6 @@ public class AvroData {
         }
       }
 
-      // Initially, to add support for logical types a new property was added
-      // with key `logicalType`. This enabled logical types for avro schemas but not others,
-      // such as parquet. The use of 'addToSchema` above supersedes this method here,
-      //  which should eventually be removed.
-      // Keeping for backwards compatibility until a major version upgrade happens.
-
-      // Below follows the older method of supporting logical types via properties.
-      // It is retained for now and will be deprecated eventually.
-      // Only Avro named types (record, enum, fixed) may contain namespace + name. Only Connect's
-      // struct converts to one of those (record), so for everything else that has a name we store
-      // the full name into a special property. For uniformity, we also duplicate this info into
-      // the same field in records as well even though it will also be available in the namespace()
-      // and name().
       if (schema.getName() != null) {
         if (Decimal.LOGICAL_NAME.equalsIgnoreCase(schema.getName())
                 && (schema.getParameters().containsKey(CONNECT_AVRO_DECIMAL_PRECISION_PROP)
@@ -977,19 +973,20 @@ public class AvroData {
         }
       }
 
-      // Note that all metadata has already been processed and placed on the baseSchema because we
-      // can't store any metadata on the actual top-level schema when it's a union because of Avro
-      // constraints on the format of schemas.
       if (!ignoreOptional) {
         if (schema.isOptional()) {
           if (schema.getDefaultValue() != null) {
-            finalSchema = org.apache.avro.SchemaBuilder.builder().unionOf()
-                    .type(baseSchema).and()
+            finalSchema = org.apache.avro.SchemaBuilder.builder()
+                    .unionOf()
+                    .type(baseSchema)
+                    .and()
                     .nullType()
                     .endUnion();
           } else {
-            finalSchema = org.apache.avro.SchemaBuilder.builder().unionOf()
-                    .nullType().and()
+            finalSchema = org.apache.avro.SchemaBuilder.builder()
+                    .unionOf()
+                    .nullType()
+                    .and()
                     .type(baseSchema)
                     .endUnion();
           }
@@ -1006,7 +1003,8 @@ public class AvroData {
 
   public org.apache.avro.Schema fromConnectSchemaWithCycle(
           Schema schema,
-          FromConnectContext fromConnectContext, boolean ignoreOptional) {
+          FromConnectContext fromConnectContext,
+          boolean ignoreOptional) {
     org.apache.avro.Schema resolvedSchema;
     if (fromConnectContext.cycleReferences.containsKey(schema.getName())) {
       resolvedSchema = fromConnectContext.cycleReferences.get(schema.getName());
@@ -1521,18 +1519,15 @@ public class AvroData {
     return resultSchema;
   }
 
+
   /**
-   * @param schema           schema to convert
-   * @param forceOptional    make the resulting schema optional, for converting Avro unions to a
-   *                         record format and simple Avro unions of null + type to optional schemas
-   * @param fieldDefaultVal  if non-null, override any connect-annotated default values with this
-   *                         one; used when converting Avro record fields since they define default
-   *                         values with the field spec, but Connect specifies them with the field's
-   *                         schema
-   * @param docDefaultVal    if non-null, override any connect-annotated documentation with this
-   *                         one;
-   *                         used when converting Avro record fields since they define doc values
-   * @param toConnectContext context object that holds state while doing the conversion
+   * Convert to connect schema
+   * @param schema
+   * @param forceOptional
+   * @param fieldDefaultVal
+   * @param docDefaultVal
+   * @param toConnectContext
+   * @return
    */
   private Schema toConnectSchema(org.apache.avro.Schema schema,
                                  boolean forceOptional,

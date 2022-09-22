@@ -20,15 +20,14 @@ package org.apache.rocketmq.schema.avro.serde;
 import org.apache.avro.Schema;
 import org.apache.rocketmq.schema.avro.AvroConverterConfig;
 import org.apache.rocketmq.schema.avro.AvroSchema;
+import org.apache.rocketmq.schema.avro.AvroSchemaRegistryClient;
 import org.apache.rocketmq.schema.avro.NonRecordContainer;
-import org.apache.rocketmq.schema.avro.TopicNameStrategy;
-import org.apache.rocketmq.schema.common.LocalSchemaRegistryClient;
+import org.apache.rocketmq.schema.common.SchemaResponse;
 import org.apache.rocketmq.schema.common.Serializer;
+import org.apache.rocketmq.schema.common.TopicNameStrategy;
 import org.apache.rocketmq.schema.registry.client.exceptions.SerializationException;
-import org.apache.rocketmq.schema.registry.common.dto.GetSchemaResponse;
 import org.apache.rocketmq.schema.registry.common.dto.RegisterSchemaRequest;
 import org.apache.rocketmq.schema.registry.common.model.Compatibility;
-import org.apache.rocketmq.schema.registry.common.model.SchemaType;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -41,14 +40,14 @@ import java.util.Map;
 public class AvroSerializer implements Serializer<AvroSchema> {
 
     private final int idSize = 8;
-    private LocalSchemaRegistryClient schemaRegistryClient;
+    private AvroSchemaRegistryClient schemaRegistryClient;
     private AvroDatumWriterFactory avroDatumWriterFactory;
 
 
     @Override
     public void configure(Map<String, ?> props) {
         AvroConverterConfig config = new AvroConverterConfig(props);
-        this.schemaRegistryClient = new LocalSchemaRegistryClient(config);
+        this.schemaRegistryClient = new AvroSchemaRegistryClient(config);
         this.avroDatumWriterFactory = AvroDatumWriterFactory.get(
                 config.useSchemaReflection(),
                 config.avroUseLogicalTypeConverters()
@@ -74,10 +73,10 @@ public class AvroSerializer implements Serializer<AvroSchema> {
                     .schemaType(schema.schemaType())
                     .compatibility(Compatibility.BACKWARD)
                     .schemaIdl(avroSchema.toString()).build();
-            GetSchemaResponse getSchemaResponse = schemaRegistryClient.getRegistrySchema(subjectName, schema.name(), registerSchemaRequest);
-            long schemaId = getSchemaResponse.getRecordId();
-            schema =  new AvroSchema(getSchemaResponse.getIdl());
-
+            SchemaResponse schemaResponse = schemaRegistryClient.autoRegisterOrGetSchema(subjectName, schema.name(), registerSchemaRequest, schema);
+            long schemaId = schemaResponse.getRecordId();
+            // parse idl
+            schema =  new AvroSchema(schemaResponse.getIdl());
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             // Add record id in the header
             out.write(ByteBuffer.allocate(idSize).putLong(schemaId).array());

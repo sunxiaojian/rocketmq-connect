@@ -18,14 +18,15 @@
 package org.apache.rocketmq.schema.json.serde;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.rocketmq.schema.common.LocalSchemaRegistryClient;
+import org.apache.rocketmq.schema.common.SchemaResponse;
 import org.apache.rocketmq.schema.common.Serializer;
+import org.apache.rocketmq.schema.common.TopicNameStrategy;
 import org.apache.rocketmq.schema.json.JsonSchema;
 import org.apache.rocketmq.schema.json.JsonSchemaConverterConfig;
+import org.apache.rocketmq.schema.json.JsonSchemaRegistryClient;
 import org.apache.rocketmq.schema.json.util.JsonSchemaUtils;
 import org.apache.rocketmq.schema.registry.client.exceptions.SerializationException;
 import org.apache.rocketmq.schema.registry.client.rest.JacksonMapper;
-import org.apache.rocketmq.schema.registry.common.dto.GetSchemaResponse;
 import org.apache.rocketmq.schema.registry.common.dto.RegisterSchemaRequest;
 import org.apache.rocketmq.schema.registry.common.model.Compatibility;
 
@@ -40,14 +41,14 @@ import java.util.Map;
  */
 public class JsonSchemaSerializer implements Serializer<JsonSchema> {
     protected static final int idSize = 8;
-    private LocalSchemaRegistryClient registryClient;
+    private JsonSchemaRegistryClient registryClient;
     private JsonSchemaConverterConfig converterConfig;
     private final ObjectMapper OBJECT_MAPPER = JacksonMapper.INSTANCE;
 
     @Override
     public void configure(Map<String, ?> props) {
         this.converterConfig = new JsonSchemaConverterConfig(props);
-        this.registryClient =  new LocalSchemaRegistryClient(this.converterConfig);
+        this.registryClient =  new JsonSchemaRegistryClient(this.converterConfig);
     }
 
     /**
@@ -72,9 +73,9 @@ public class JsonSchemaSerializer implements Serializer<JsonSchema> {
                     .desc(schema.name())
                     .build();
 
-            GetSchemaResponse getSchemaResponse = registryClient.getRegistrySchema(subjectName, schema.name(), schemaRequest);
-            long schemaId = getSchemaResponse.getRecordId();
-            schema = new JsonSchema(getSchemaResponse.getIdl());
+            SchemaResponse schemaResponse = registryClient.autoRegisterOrGetSchema(subjectName, schema.name(), schemaRequest, schema);
+            long schemaId = schemaResponse.getRecordId();
+            schema = new JsonSchema(schemaResponse.getIdl());
             // validate json value
             if (converterConfig.validate()) {
                 JsonSchemaUtils.validate(schema.rawSchema(), value);

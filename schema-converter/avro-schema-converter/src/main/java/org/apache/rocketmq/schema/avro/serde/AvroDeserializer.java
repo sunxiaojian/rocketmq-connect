@@ -21,11 +21,11 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericContainer;
 import org.apache.rocketmq.schema.avro.AvroConverterConfig;
 import org.apache.rocketmq.schema.avro.AvroSchema;
+import org.apache.rocketmq.schema.avro.AvroSchemaRegistryClient;
 import org.apache.rocketmq.schema.avro.GenericContainerWithVersion;
 import org.apache.rocketmq.schema.avro.NonRecordContainer;
-import org.apache.rocketmq.schema.avro.TopicNameStrategy;
 import org.apache.rocketmq.schema.common.Deserializer;
-import org.apache.rocketmq.schema.common.LocalSchemaRegistryClient;
+import org.apache.rocketmq.schema.common.TopicNameStrategy;
 import org.apache.rocketmq.schema.registry.common.dto.GetSchemaResponse;
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -34,13 +34,13 @@ import java.util.Map;
  * avro serializer
  */
 public class AvroDeserializer implements Deserializer<GenericContainerWithVersion> {
-    private LocalSchemaRegistryClient schemaRegistryClient;
+    private AvroSchemaRegistryClient schemaRegistryClient;
     private AvroDatumReaderFactory avroDatumReaderFactory;
 
     @Override
     public void configure(Map<String, ?> props) {
         AvroConverterConfig converterConfig = new AvroConverterConfig(props);
-        this.schemaRegistryClient = new LocalSchemaRegistryClient(converterConfig);
+        this.schemaRegistryClient = new AvroSchemaRegistryClient(converterConfig);
         this.avroDatumReaderFactory = AvroDatumReaderFactory.get(
                 converterConfig.useSchemaReflection(),
                 converterConfig.avroUseLogicalTypeConverters(),

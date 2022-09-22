@@ -18,15 +18,12 @@ package org.apache.rocketmq.schema.json.serde;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.openmessaging.connector.api.data.SchemaAndValue;
 import org.apache.rocketmq.schema.common.Deserializer;
-import org.apache.rocketmq.schema.common.LocalSchemaRegistryClient;
+import org.apache.rocketmq.schema.common.TopicNameStrategy;
 import org.apache.rocketmq.schema.json.JsonSchema;
 import org.apache.rocketmq.schema.json.JsonSchemaAndValue;
 import org.apache.rocketmq.schema.json.JsonSchemaConverterConfig;
-import org.apache.rocketmq.schema.json.JsonSchemaData;
-import org.apache.rocketmq.schema.registry.client.SchemaRegistryClient;
-import org.apache.rocketmq.schema.registry.client.exceptions.RestClientException;
+import org.apache.rocketmq.schema.json.JsonSchemaRegistryClient;
 import org.apache.rocketmq.schema.registry.client.rest.JacksonMapper;
 import org.apache.rocketmq.schema.registry.common.dto.GetSchemaResponse;
 import org.everit.json.schema.Schema;
@@ -45,14 +42,14 @@ import java.util.Map;
 public class JsonSchemaDeserializer implements Deserializer<JsonSchemaAndValue> {
 
     protected static final int idSize = 8;
-    private LocalSchemaRegistryClient schemaRegistryClient;
+    private JsonSchemaRegistryClient schemaRegistryClient;
     private final ObjectMapper OBJECT_MAPPER = JacksonMapper.INSTANCE;
     private JsonSchemaConverterConfig jsonSchemaConverterConfig;
 
     @Override
     public void configure(Map<String, ?> props) {
        this.jsonSchemaConverterConfig = new JsonSchemaConverterConfig(props);
-       this.schemaRegistryClient = new LocalSchemaRegistryClient(this.jsonSchemaConverterConfig);
+       this.schemaRegistryClient = new JsonSchemaRegistryClient(this.jsonSchemaConverterConfig);
     }
 
     /**
