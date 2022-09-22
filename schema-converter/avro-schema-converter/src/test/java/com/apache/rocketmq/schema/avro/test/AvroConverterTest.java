@@ -55,11 +55,4 @@ public class AvroConverterTest {
         Assert.assertEquals(struct, schemaAndValue.value());
     }
 
-    /**
-     * To connect record
-     */
-    @Test
-    public void toConnectRecordTest(){
-
-    }
 }
