@@ -17,6 +17,8 @@
 
 package org.apache.rocketmq.schema.common;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import org.apache.rocketmq.schema.registry.client.SchemaRegistryClient;
 import org.apache.rocketmq.schema.registry.client.SchemaRegistryClientFactory;
 import org.apache.rocketmq.schema.registry.client.exceptions.RestClientException;
@@ -29,6 +31,9 @@ import org.apache.rocketmq.schema.registry.common.dto.UpdateSchemaResponse;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Local schema registry client
@@ -36,11 +41,14 @@ import java.util.List;
 public abstract class AbstractLocalSchemaRegistryClient {
 
     protected String cluster = "Connect";
-
     protected final SchemaRegistryClient schemaRegistryClient;
     private final Long serdeSchemaRegistryId;
     protected final boolean autoRegisterSchemas;
     protected final boolean useLatestVersion;
+    private Cache<String , Boolean> cache = CacheBuilder.newBuilder()
+            .initialCapacity(1000)
+            .expireAfterWrite(60, TimeUnit.SECONDS)
+            .build();
     public AbstractLocalSchemaRegistryClient(AbstractConverterConfig config){
         this.schemaRegistryClient = SchemaRegistryClientFactory.newClient(config.getSchemaRegistryUrl(),null);
         this.serdeSchemaRegistryId = config.getSerdeSchemaRegistryId();
@@ -151,14 +159,25 @@ public abstract class AbstractLocalSchemaRegistryClient {
      */
     public Boolean checkSubjectExists(String namespace, String subject){
         try {
-             schemaRegistryClient.getSchemaBySubject(cluster, namespace, subject);
-             return Boolean.TRUE;
-        } catch (RestClientException | IOException e) {
-            if (e instanceof  RestClientException) {
-                return Boolean.FALSE;
-            } else {
-                throw new RuntimeException(e);
-            }
+            String key = cluster.concat("_").concat(namespace).concat("_").concat(subject);
+            return cache.get(key, new Callable<Boolean>() {
+                @Override
+                public Boolean call() throws Exception {
+                    try {
+                        schemaRegistryClient.getSchemaBySubject(cluster, namespace, subject);
+                        return Boolean.TRUE;
+                    } catch (RestClientException | IOException e) {
+                        if (e instanceof  RestClientException) {
+                            return Boolean.FALSE;
+                        } else {
+                            throw new RuntimeException(e);
+                        }
+                    }
+
+                }
+            });
+        }  catch (ExecutionException e) {
+            throw new RuntimeException(e);
         }
     }
 
