@@ -47,6 +47,7 @@ public class AvroSchemaRegistryClient extends AbstractLocalSchemaRegistryClient 
             AvroSchema compareSchema = new AvroSchema(schemaRecord.getIdl());
             if (currentAvroSchema.deepEquals(compareSchema)){
                 matchSchemaRecord = schemaRecord;
+                break;
             }
         }
         return matchSchemaRecord;

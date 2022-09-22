@@ -20,6 +20,7 @@ package org.apache.rocketmq.schema.avro.serde;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericContainer;
 import org.apache.rocketmq.schema.avro.AvroConverterConfig;
+import org.apache.rocketmq.schema.avro.AvroData;
 import org.apache.rocketmq.schema.avro.AvroSchema;
 import org.apache.rocketmq.schema.avro.AvroSchemaRegistryClient;
 import org.apache.rocketmq.schema.avro.GenericContainerWithVersion;
@@ -66,7 +67,7 @@ public class AvroDeserializer implements Deserializer<GenericContainerWithVersio
         ByteBuffer byteBuffer = ByteBuffer.wrap(payload);
         long recordId = byteBuffer.getLong();
         // TODO  Should get schema by record id
-        GetSchemaResponse schemaResponse = this.schemaRegistryClient.getSchemaLatestVersion(subjectName);
+        GetSchemaResponse schemaResponse = this.schemaRegistryClient.getSchemaLatestVersion(AvroData.NAMESPACE, subjectName);
         if (recordId != schemaResponse.getRecordId()){
             throw new RuntimeException("The record id is inconsistent");
         }

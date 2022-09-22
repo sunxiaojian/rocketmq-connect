@@ -23,6 +23,7 @@ import org.apache.rocketmq.schema.common.TopicNameStrategy;
 import org.apache.rocketmq.schema.json.JsonSchema;
 import org.apache.rocketmq.schema.json.JsonSchemaAndValue;
 import org.apache.rocketmq.schema.json.JsonSchemaConverterConfig;
+import org.apache.rocketmq.schema.json.JsonSchemaData;
 import org.apache.rocketmq.schema.json.JsonSchemaRegistryClient;
 import org.apache.rocketmq.schema.registry.client.rest.JacksonMapper;
 import org.apache.rocketmq.schema.registry.common.dto.GetSchemaResponse;
@@ -66,7 +67,7 @@ public class JsonSchemaDeserializer implements Deserializer<JsonSchemaAndValue> 
             return null;
         }
         String subjectName = TopicNameStrategy.subjectName(topic, isKey);
-        GetSchemaResponse response = schemaRegistryClient.getSchemaLatestVersion(subjectName);
+        GetSchemaResponse response = schemaRegistryClient.getSchemaLatestVersion(JsonSchemaData.NAMESPACE, subjectName);
         ByteBuffer buffer = ByteBuffer.wrap(payload);
         long schemaId = buffer.getLong();
         if (schemaId != response.getRecordId()) {

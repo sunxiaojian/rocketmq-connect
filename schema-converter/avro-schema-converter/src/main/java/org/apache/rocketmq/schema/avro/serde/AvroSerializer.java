@@ -18,7 +18,9 @@
 package org.apache.rocketmq.schema.avro.serde;
 
 import org.apache.avro.Schema;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.schema.avro.AvroConverterConfig;
+import org.apache.rocketmq.schema.avro.AvroData;
 import org.apache.rocketmq.schema.avro.AvroSchema;
 import org.apache.rocketmq.schema.avro.AvroSchemaRegistryClient;
 import org.apache.rocketmq.schema.avro.NonRecordContainer;
@@ -73,10 +75,12 @@ public class AvroSerializer implements Serializer<AvroSchema> {
                     .schemaType(schema.schemaType())
                     .compatibility(Compatibility.BACKWARD)
                     .schemaIdl(avroSchema.toString()).build();
-            SchemaResponse schemaResponse = schemaRegistryClient.autoRegisterOrGetSchema(subjectName, schema.name(), registerSchemaRequest, schema);
+            SchemaResponse schemaResponse = schemaRegistryClient.autoRegisterOrGetSchema(AvroData.NAMESPACE,subjectName, schema.rawSchema().getName(), registerSchemaRequest, schema);
             long schemaId = schemaResponse.getRecordId();
             // parse idl
-            schema =  new AvroSchema(schemaResponse.getIdl());
+            if (StringUtils.isNotEmpty(schemaResponse.getIdl())){
+                schema = new AvroSchema(schemaResponse.getIdl());
+            }
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             // Add record id in the header
             out.write(ByteBuffer.allocate(idSize).putLong(schemaId).array());

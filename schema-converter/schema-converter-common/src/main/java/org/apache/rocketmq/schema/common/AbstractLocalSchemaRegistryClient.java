@@ -35,8 +35,7 @@ import java.util.List;
  */
 public abstract class AbstractLocalSchemaRegistryClient {
 
-    protected String cluster = "default";
-    protected String namespace = "default";
+    protected String cluster = "Connect";
 
     protected final SchemaRegistryClient schemaRegistryClient;
     private final Long serdeSchemaRegistryId;
@@ -56,13 +55,13 @@ public abstract class AbstractLocalSchemaRegistryClient {
      * @param request
      * @return
      */
-    public SchemaResponse autoRegisterOrGetSchema(String subject, String schemaName, RegisterSchemaRequest request, ParsedSchema schema){
+    public SchemaResponse autoRegisterOrGetSchema(String namespace, String subject, String schemaName, RegisterSchemaRequest request, ParsedSchema schema){
         if (autoRegisterSchemas) {
-            return this.autoRegisterSchema(subject, schemaName, request, schema);
+            return this.autoRegisterSchema(namespace, subject, schemaName, request, schema);
         } else if (serdeSchemaRegistryId != null){
             throw new RuntimeException("Getting schema based on ID is not supported temporarily");
         } else {
-            GetSchemaResponse getSchemaResponse = getSchemaLatestVersion(subject);
+            GetSchemaResponse getSchemaResponse = getSchemaLatestVersion(namespace, subject);
             return SchemaResponse
                     .builder()
                     .subjectName(getSchemaResponse.getSubjectFullName())
@@ -80,21 +79,20 @@ public abstract class AbstractLocalSchemaRegistryClient {
      * @param schemaName
      * @param request
      */
-    protected SchemaResponse autoRegisterSchema(String subject, String schemaName, RegisterSchemaRequest request, ParsedSchema schema){
+    protected SchemaResponse autoRegisterSchema(String namespace, String subject, String schemaName, RegisterSchemaRequest request, ParsedSchema schema){
         try {
-            if (checkSubjectExists(subject)){
+            if (checkSubjectExists(namespace, subject)){
                 // Get all version schema record
                 List<SchemaRecordDto> schemaRecordAllVersion = this.schemaRegistryClient.getSchemaListBySubject(cluster, namespace, subject);
-                return compareAndGet(subject, schemaName, request, schemaRecordAllVersion, schema);
+                return compareAndGet(namespace , subject, schemaName, request, schemaRecordAllVersion, schema);
             } else {
-                RegisterSchemaResponse registerSchemaResponse = this.schemaRegistryClient.registerSchema(subject, schemaName, request);
+                RegisterSchemaResponse registerSchemaResponse = this.schemaRegistryClient.registerSchema(cluster, namespace, subject, schemaName, request);
                 GetSchemaResponse response = new GetSchemaResponse();
                 response.setRecordId(registerSchemaResponse.getRecordId());
                 return SchemaResponse.builder()
                         .subjectName(subject)
                         .schemaName(schemaName)
                         .recordId(registerSchemaResponse.getRecordId())
-                        .idl(request.getSchemaIdl())
                         .build();
             }
         } catch (RestClientException | IOException e) {
@@ -112,7 +110,7 @@ public abstract class AbstractLocalSchemaRegistryClient {
      * @param schema
      * @return
      */
-    protected SchemaResponse compareAndGet(String subject, String schemaName, RegisterSchemaRequest request, List<SchemaRecordDto> schemaRecordAllVersion, ParsedSchema schema) {
+    protected SchemaResponse compareAndGet(String namespace, String subject, String schemaName, RegisterSchemaRequest request, List<SchemaRecordDto> schemaRecordAllVersion, ParsedSchema schema) {
         SchemaRecordDto matchSchemaRecord = compareAndGet(schemaRecordAllVersion, schema);
         if (matchSchemaRecord != null){
             GetSchemaResponse getSchemaResponse = new GetSchemaResponse();
@@ -121,7 +119,7 @@ public abstract class AbstractLocalSchemaRegistryClient {
                     .subjectName(getSchemaResponse.getSubjectFullName())
                     .schemaName(getSchemaResponse.getSchemaFullName())
                     .recordId(getSchemaResponse.getRecordId())
-                    .idl(getSchemaResponse.getIdl())
+                    .idl(request.getSchemaIdl())
                     .build();
         }
         // match is null
@@ -138,7 +136,6 @@ public abstract class AbstractLocalSchemaRegistryClient {
                     .subjectName(subject)
                     .schemaName(schemaName)
                     .recordId(updateSchemaResponse.getRecordId())
-                    .idl(request.getSchemaIdl())
                     .build();
         } catch (RestClientException | IOException e) {
             throw new RuntimeException(e);
@@ -152,9 +149,9 @@ public abstract class AbstractLocalSchemaRegistryClient {
      * @param subject
      * @return
      */
-    public Boolean checkSubjectExists(String subject){
+    public Boolean checkSubjectExists(String namespace, String subject){
         try {
-             schemaRegistryClient.getSchemaBySubject(subject);
+             schemaRegistryClient.getSchemaBySubject(cluster, namespace, subject);
              return Boolean.TRUE;
         } catch (RestClientException | IOException e) {
             if (e instanceof  RestClientException) {
@@ -170,9 +167,9 @@ public abstract class AbstractLocalSchemaRegistryClient {
      * @param subject
      * @return
      */
-    public GetSchemaResponse getSchemaLatestVersion(String subject){
+    public GetSchemaResponse getSchemaLatestVersion(String namespace, String subject){
         try {
-            return schemaRegistryClient.getSchemaBySubject(subject);
+            return schemaRegistryClient.getSchemaBySubject(cluster, namespace, subject);
         } catch (RestClientException | IOException e) {
             if (e instanceof  RestClientException) {
                 return null;

@@ -18,11 +18,13 @@
 package org.apache.rocketmq.schema.json.serde;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.schema.common.SchemaResponse;
 import org.apache.rocketmq.schema.common.Serializer;
 import org.apache.rocketmq.schema.common.TopicNameStrategy;
 import org.apache.rocketmq.schema.json.JsonSchema;
 import org.apache.rocketmq.schema.json.JsonSchemaConverterConfig;
+import org.apache.rocketmq.schema.json.JsonSchemaData;
 import org.apache.rocketmq.schema.json.JsonSchemaRegistryClient;
 import org.apache.rocketmq.schema.json.util.JsonSchemaUtils;
 import org.apache.rocketmq.schema.registry.client.exceptions.SerializationException;
@@ -73,9 +75,12 @@ public class JsonSchemaSerializer implements Serializer<JsonSchema> {
                     .desc(schema.name())
                     .build();
 
-            SchemaResponse schemaResponse = registryClient.autoRegisterOrGetSchema(subjectName, schema.name(), schemaRequest, schema);
+            SchemaResponse schemaResponse = registryClient.autoRegisterOrGetSchema(JsonSchemaData.NAMESPACE, subjectName, schema.name(), schemaRequest, schema);
             long schemaId = schemaResponse.getRecordId();
-            schema = new JsonSchema(schemaResponse.getIdl());
+            // parse idl
+            if (StringUtils.isNotEmpty(schemaResponse.getIdl())){
+                schema = new JsonSchema(schemaResponse.getIdl());
+            }
             // validate json value
             if (converterConfig.validate()) {
                 JsonSchemaUtils.validate(schema.rawSchema(), value);
