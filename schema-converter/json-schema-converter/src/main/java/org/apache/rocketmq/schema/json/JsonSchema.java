@@ -95,7 +95,7 @@ public class JsonSchema implements ParsedSchema<Schema> {
             try {
                 SchemaLoader.SchemaLoaderBuilder builder = SchemaLoader.builder()
                         .useDefaults(true).draftV7Support();
-                JSONObject jsonObject = objectMapper.treeToValue((jsonNode), JSONObject.class);
+                JSONObject jsonObject = new JSONObject(objectMapper.writeValueAsString(jsonNode));
                 builder.schemaJson(jsonObject);
                 SchemaLoader loader = builder.build();
                 schemaObj = loader.load().build();

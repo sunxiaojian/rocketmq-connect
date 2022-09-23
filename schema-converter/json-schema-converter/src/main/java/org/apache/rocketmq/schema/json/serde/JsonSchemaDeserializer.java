@@ -16,6 +16,7 @@
  */
 package org.apache.rocketmq.schema.json.serde;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.rocketmq.schema.common.Deserializer;
@@ -25,6 +26,7 @@ import org.apache.rocketmq.schema.json.JsonSchemaAndValue;
 import org.apache.rocketmq.schema.json.JsonSchemaConverterConfig;
 import org.apache.rocketmq.schema.json.JsonSchemaData;
 import org.apache.rocketmq.schema.json.JsonSchemaRegistryClient;
+import org.apache.rocketmq.schema.json.util.JsonSchemaUtils;
 import org.apache.rocketmq.schema.registry.client.rest.JacksonMapper;
 import org.apache.rocketmq.schema.registry.common.dto.GetSchemaResponse;
 import org.everit.json.schema.Schema;
@@ -71,7 +73,7 @@ public class JsonSchemaDeserializer implements Deserializer<JsonSchemaAndValue> 
         ByteBuffer buffer = ByteBuffer.wrap(payload);
         long schemaId = buffer.getLong();
         if (schemaId != response.getRecordId()) {
-            throw new RuntimeException("Deserialization schema id cannot match, ser schemaId " + schemaId + ", DeSer schema id" + response.getRecordId());
+//            throw new RuntimeException("Deserialization schema id cannot match, ser schemaId " + schemaId + ", DeSer schema id " + response.getRecordId());
         }
         int length = buffer.limit() - idSize;
         int start = buffer.position() + buffer.arrayOffset();
@@ -94,7 +96,11 @@ public class JsonSchemaDeserializer implements Deserializer<JsonSchemaAndValue> 
         Schema schema = schemaLoaderBuilder.build().load().build();
         // validate schema
         if (jsonSchemaConverterConfig.validate()) {
-            schema.validate(value);
+            try {
+                JsonSchemaUtils.validate(schema, value);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
         }
         return new JsonSchemaAndValue(new JsonSchema(schema), value);
     }
