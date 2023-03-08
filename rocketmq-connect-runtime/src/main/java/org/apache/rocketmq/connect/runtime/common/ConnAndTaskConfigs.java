@@ -28,7 +28,6 @@ public class ConnAndTaskConfigs {
 
     private Map<String, ConnectKeyValue> connectorConfigs = new HashMap<>();
     private Map<String, List<ConnectKeyValue>> taskConfigs = new HashMap<>();
-
     public Map<String, ConnectKeyValue> getConnectorConfigs() {
         return connectorConfigs;
     }

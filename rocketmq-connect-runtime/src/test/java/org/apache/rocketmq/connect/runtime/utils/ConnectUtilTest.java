@@ -111,17 +111,6 @@ public class ConnectUtilTest {
     }
 
     @Test
-    public void initDefaultMQPushConsumerTest() {
-        WorkerConfig connectConfig = new WorkerConfig();
-        connectConfig.setNamesrvAddr(NAME_SERVER_ADDR);
-        final DefaultMQPushConsumer consumer = ConnectUtil.initDefaultMQPushConsumer(connectConfig);
-        Assert.assertEquals(NAME_SERVER_ADDR, consumer.getNamesrvAddr());
-        Assert.assertEquals(30000, consumer.getPollNameServerInterval());
-        Assert.assertEquals(30000, consumer.getHeartbeatBrokerInterval());
-        Assert.assertEquals(5000, consumer.getPersistConsumerOffsetInterval());
-    }
-
-    @Test
     public void startMQAdminToolTest() throws MQClientException {
         WorkerConfig connectConfig = new WorkerConfig();
         connectConfig.setNamesrvAddr(NAME_SERVER_ADDR);

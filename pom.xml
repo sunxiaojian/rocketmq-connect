@@ -23,6 +23,7 @@
     <packaging>pom</packaging>
     <version>0.0.1-SNAPSHOT</version>
     <modules>
+        <module>rocketmq-connect-common</module>
         <module>rocketmq-connect-sample</module>
         <module>rocketmq-connect-runtime</module>
         <module>rocketmq-connect-cli</module>
@@ -30,6 +31,7 @@
         <module>transforms</module>
         <module>metric-exporter</module>
         <module>schema-converter</module>
+
     </modules>
     <name>RocketMQ Connect</name>
 
@@ -183,19 +185,14 @@
                 <version>${commons-collections4.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.apache.rocketmq</groupId>
-                <artifactId>rocketmq-tools</artifactId>
-                <version>${rocketmq.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.rocketmq</groupId>
-                <artifactId>rocketmq-client</artifactId>
-                <version>${rocketmq.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.apache.maven</groupId>
                 <artifactId>maven-artifact</artifactId>
                 <version>${maven-artifact.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>1.18.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
